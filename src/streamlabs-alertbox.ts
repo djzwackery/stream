@@ -208,10 +208,8 @@ function buildEvent(
   };
 }
 
-// Update after deploying worker/ (see worker/README.md's deploy step),
-// same YOUR_SUBDOMAIN placeholder as src/zw-alerts.ts/src/status.ts.
 const AVATAR_LOOKUP_URL =
-  "https://zw-twitch-relay.YOUR_SUBDOMAIN.workers.dev/twitch/avatar";
+  "https://zw-twitch-relay.djzwackery.workers.dev/twitch/avatar";
 const AVATAR_FETCH_TIMEOUT_MS = 1200;
 
 /**

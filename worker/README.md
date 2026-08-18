@@ -74,6 +74,14 @@ Only needs doing once per deployment, not per stream.
 
 6. **Deploy:**
 
+   If this Cloudflare account has never deployed a Worker before, do this part interactively, from
+   your own terminal, once, before wiring up CI: `npx wrangler login` (opens a browser), then
+   `npx wrangler deploy`. It'll ask _"Would you like to register a workers.dev subdomain now?"_,
+   answer yes and pick one, that's a permanent, account-wide, one-time choice, which is why it's a
+   prompt rather than something `deploy-worker.yml` could do unattended in CI (a non-interactive
+   `wrangler deploy` just fails with "You need to register a workers.dev subdomain" if this hasn't
+   happened yet). Once it's registered, every deploy after this, interactive or not, just works.
+
    ```bash
    npm run deploy
    ```

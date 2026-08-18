@@ -187,6 +187,39 @@ async function handleAvatar(request: Request, env: Env): Promise<Response> {
   );
 }
 
+/**
+ * Forces the token refresh the Cron would otherwise only run every 3
+ * hours: `wrangler secret put` alone doesn't populate KV, only a
+ * successful refresh does, so right after the one-time setup there's
+ * nothing in KV yet for `/status`/`/twitch/avatar` to read until either
+ * this runs once or the Cron eventually fires on its own. Also useful
+ * later if a refresh ever gets stuck and needs retrying without waiting.
+ * Gated on `TWITCH_WEBHOOK_SECRET` as a bearer token, not origin-checked:
+ * this is meant to be curled from a terminal, which sends no Origin.
+ */
+async function handleRefresh(request: Request, env: Env): Promise<Response> {
+  if (
+    request.headers.get("Authorization") !==
+    `Bearer ${env.TWITCH_WEBHOOK_SECRET}`
+  ) {
+    return new Response("Forbidden", { status: 403 });
+  }
+  try {
+    const tokens = await refreshAccessToken(
+      env.TOKENS,
+      env.TWITCH_CLIENT_ID,
+      env.TWITCH_CLIENT_SECRET,
+      env.TWITCH_REFRESH_TOKEN,
+    );
+    return Response.json({ refreshedAt: tokens.refreshedAt });
+  } catch (err) {
+    return new Response(
+      `Refresh failed: ${err instanceof Error ? err.message : String(err)}`,
+      { status: 502 },
+    );
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -204,6 +237,9 @@ export default {
     }
     if (url.pathname === "/twitch/avatar") {
       return handleAvatar(request, env);
+    }
+    if (url.pathname === "/twitch/refresh" && request.method === "POST") {
+      return handleRefresh(request, env);
     }
     return new Response("Not found", { status: 404 });
   },

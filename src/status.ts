@@ -7,7 +7,7 @@
 (function () {
   const qs = new URLSearchParams(location.search);
   const WORKER_URL =
-    qs.get("worker") || "https://zw-twitch-relay.YOUR_SUBDOMAIN.workers.dev";
+    qs.get("worker") || "https://zw-twitch-relay.djzwackery.workers.dev";
   // Matches the Worker's own Cron schedule (wrangler.toml); flags the token
   // card as overdue once a refresh is later than that plus this margin.
   const REFRESH_INTERVAL_MS = 3 * 60 * 60 * 1000;

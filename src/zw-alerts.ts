@@ -21,7 +21,7 @@ const qs = new URLSearchParams(location.search);
  * `wrangler dev`.
  */
 const REDEMPTION_HUB_URL =
-  qs.get("worker") || "wss://zw-twitch-relay.YOUR_SUBDOMAIN.workers.dev/ws";
+  qs.get("worker") || "wss://zw-twitch-relay.djzwackery.workers.dev/ws";
 
 function num(key: string, fallback: number): number {
   const v = parseFloat(qs.get(key) ?? "");
