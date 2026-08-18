@@ -250,6 +250,24 @@ export default {
       return handleStatus(request, env);
     }
     if (url.pathname === "/twitch/avatar") {
+      // The browser sends this itself, to ask permission before the real
+      // GET, because that GET carries a custom `Authorization` header
+      // (any non-"simple" header triggers a CORS preflight). A preflight
+      // never carries the real header it's asking about, so it must be
+      // answered here, before handleAvatar's own token check, or every
+      // avatar lookup fails as a blocked preflight before the actual
+      // request is ever sent, regardless of whether the token is right.
+      if (request.method === "OPTIONS") {
+        return new Response(null, {
+          status: 204,
+          headers: {
+            ...AVATAR_CORS_HEADERS,
+            "Access-Control-Allow-Headers": "Authorization",
+            "Access-Control-Allow-Methods": "GET",
+            "Access-Control-Max-Age": "86400",
+          },
+        });
+      }
       return handleAvatar(request, env);
     }
     if (url.pathname === "/twitch/refresh" && request.method === "POST") {
