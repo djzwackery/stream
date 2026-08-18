@@ -39,12 +39,6 @@
         color: var(--ink-dim);
         max-width: 70ch;
       }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-        gap: 0.6rem;
-        max-width: 960px;
-      }
       .row {
         display: flex;
         gap: 0.6rem;
@@ -91,6 +85,11 @@
         border: 2px solid var(--magenta);
         padding: 0.6rem;
       }
+      select:disabled,
+      input:disabled {
+        opacity: 0.35;
+        border-color: var(--void-3);
+      }
       label {
         font-family: var(--font-label);
         font-weight: 700;
@@ -127,13 +126,6 @@
       a:hover {
         color: var(--sun);
       }
-      #qb-url {
-        flex: 1;
-        min-width: 320px;
-        text-transform: none;
-        letter-spacing: normal;
-        font-family: ui-monospace, monospace;
-      }
       textarea {
         flex: 1;
         min-width: 320px;
@@ -154,11 +146,19 @@
   <body>
     <h1>Alert control</h1>
     <p>
-      Fires test alerts into every <code>alerts.html</code> browser source on
-      this origin (the live one included) over BroadcastChannel with a
-      localStorage fallback. Keep this open on a second monitor for rehearsals.
+      Fires test alerts into every open <code>alerts.html</code> on this origin.
     </p>
     <div class="row">
+      <label
+        >Type<select id="type">
+          <option value="follow">follow</option>
+          <option value="sub">sub</option>
+          <option value="tip">tip</option>
+          <option value="bits">bits</option>
+          <option value="raid">raid</option>
+          <option value="redeem">redeem</option>
+        </select></label
+      >
       <label
         >Tier<select id="tier">
           <option>small</option>
@@ -166,11 +166,7 @@
           <option>huge</option>
         </select></label
       >
-      <label
-        >Variant<select id="variant">
-          <option value="">cycle</option>
-        </select></label
-      >
+      <label>Variant<select id="variant"></select></label>
       <label>Name<input id="name" value="ravemum74" size="14" /></label>
       <label>Value<input id="value" value="25" size="6" /></label>
       <label
@@ -178,57 +174,19 @@
       /></label>
       <label>Reward<select id="reward"></select></label>
     </div>
-    <div class="grid" id="buttons"></div>
     <div class="row">
-      <button data-tone="acid" id="cycle">Run all 18 in sequence</button>
+      <button data-tone="acid" id="fire">Fire</button>
+      <button id="cycle">Run all 18 in sequence</button>
     </div>
     <div class="preview">
       <iframe id="pv" src="alerts.html" title="preview"></iframe>
     </div>
-    <h2>URL builder</h2>
-    <p>
-      Builds the tuning query string from README's "Tuning, all via query
-      string" table. Blank fields fall back to the driver's own default and are
-      left out of the URL, so paste the result straight into an OBS/Streamlabs
-      browser source.
-    </p>
-    <div class="grid" id="qb">
-      <label
-        >Page<select id="qb-page">
-          <option value="alerts.html">alerts.html</option>
-          <option value="redemptions.html">redemptions.html</option>
-        </select></label
-      >
-      <label>Duration (ms)<input id="qb-duration" placeholder="5000" /></label>
-      <label>Top offset (px)<input id="qb-top" placeholder="96" /></label>
-      <label>Tip big<input id="qb-tipBig" placeholder="20" /></label>
-      <label>Tip huge<input id="qb-tipHuge" placeholder="100" /></label>
-      <label>Bits big<input id="qb-bitsBig" placeholder="1000" /></label>
-      <label>Bits huge<input id="qb-bitsHuge" placeholder="5000" /></label>
-      <label>Raid big<input id="qb-raidBig" placeholder="20" /></label>
-      <label>Raid huge<input id="qb-raidHuge" placeholder="100" /></label>
-      <label>Months big<input id="qb-monthsBig" placeholder="6" /></label>
-      <label>Gift huge<input id="qb-giftHuge" placeholder="10" /></label>
-      <label>Currency<input id="qb-currency" placeholder="AUD" /></label>
-    </div>
-    <div class="row">
-      <input id="qb-url" readonly />
-      <button type="button" id="qb-copy">Copy</button>
-    </div>
     <h2>Streamlabs Alert Box code</h2>
     <p>
-      Pick a type, tier and layout variant, generate one widget per combination
-      you actually want (e.g. "Tip / Huge / Jar"), paste it into its own
-      Streamlabs Alert Box variation, and set that variation's own condition in
-      Streamlabs (amount, months, etc.) to when it should fire; neither tier nor
-      variant is computed from the event here, both are fixed per pasted widget.
-      Custom HTML/CSS/JS → paste the HTML box below into "HTML", the CSS box
-      into "CSS", and the JS box into "JS" (all three, Streamlabs runs its JS
-      box as a standalone script, not a module, so it can't be a
-      <code>&lt;script&gt;</code> tag inside the HTML box). The JS box is the
-      same for every combination, only HTML changes with the dropdowns. One-time
-      per widget, no token, nothing to reconnect: Streamlabs runs this itself
-      from then on.
+      One widget per type/tier/variant. Paste HTML → Streamlabs "HTML", CSS →
+      "CSS", JS → "JS" (all three, its JS box can't run a
+      <code>&lt;script&gt;</code> tag). Set that widget's own condition in
+      Streamlabs.
     </p>
     <div class="row">
       <label

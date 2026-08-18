@@ -54,20 +54,26 @@
     }
   }
 
-  function payload(type: AlertType, variant?: string): RawAlertPayload {
+  // `variantOverride` is only for the "run all 18" sequence below, which
+  // needs to step through combinations the Type/Variant selects aren't
+  // currently showing; the Fire button always leaves it unset and reads the
+  // (type-scoped) Variant select instead.
+  function payload(type: AlertType, variantOverride?: string): RawAlertPayload {
     const o: RawAlertPayload = {
       type,
-      variant: variant || $<HTMLSelectElement>("variant").value || undefined,
+      variant: variantOverride ?? $<HTMLSelectElement>("variant").value,
       name: $<HTMLInputElement>("name").value || "someone",
       value: parseFloat($<HTMLInputElement>("value").value) || 1,
-      message: $<HTMLInputElement>("message").value || undefined,
+      message:
+        type === "redeem"
+          ? undefined
+          : $<HTMLInputElement>("message").value || undefined,
       plan: 2,
       tier: $<HTMLSelectElement>("tier").value as AlertTier,
       avatar: randomAvatar(),
     };
     if (type === "redeem") {
       o.reward = $<HTMLSelectElement>("reward").value;
-      o.message = undefined;
     }
     if (type === "raid") {
       // Squad (raid's layout) stacks up to 6 tiles off party_avatars, not avatar
@@ -76,24 +82,30 @@
     return o;
   }
 
-  TYPES.forEach((t) => {
-    const b = document.createElement("button");
-    b.textContent = t;
-    b.onclick = () => send(payload(t));
-    $("buttons").appendChild(b);
-  });
-
-  function fillVariants(): void {
-    const s = $<HTMLSelectElement>("variant");
-    s.innerHTML = '<option value="">cycle</option>';
-    [...new Set(TYPES.flatMap((t) => VAR[t]))].forEach((v) => {
+  // Variant only ever lists the selected type's own three, and Message/
+  // Reward disable themselves when the selected type doesn't use them
+  // (previously a global list of all 18 variant names applied to whichever
+  // type you fired, so most combinations were invalid and silently fell
+  // back to that type's first variant instead of what was picked).
+  function updateForType(): void {
+    const type = $<HTMLSelectElement>("type").value as AlertType;
+    const variantSelect = $<HTMLSelectElement>("variant");
+    variantSelect.innerHTML = "";
+    VAR[type].forEach((v) => {
       const o = document.createElement("option");
       o.value = v;
       o.textContent = v;
-      s.appendChild(o);
+      variantSelect.appendChild(o);
     });
+    $<HTMLInputElement>("message").disabled = type === "redeem";
+    $<HTMLSelectElement>("reward").disabled = type !== "redeem";
   }
-  fillVariants();
+  $<HTMLSelectElement>("type").addEventListener("change", updateForType);
+  updateForType();
+
+  $<HTMLButtonElement>("fire").onclick = () => {
+    send(payload($<HTMLSelectElement>("type").value as AlertType));
+  };
 
   // Fetched rather than hardcoded so the dropdown can't drift out of sync
   // with rewards.json (a reward added there used to need a matching edit here).
@@ -128,38 +140,6 @@
     step();
   };
 
-  // Maps a query builder input's id to the query param it fills in, matching
-  // README's "Tuning, all via query string" table.
-  const QB_FIELDS: [string, string][] = [
-    ["qb-duration", "duration"],
-    ["qb-top", "top"],
-    ["qb-tipBig", "tipBig"],
-    ["qb-tipHuge", "tipHuge"],
-    ["qb-bitsBig", "bitsBig"],
-    ["qb-bitsHuge", "bitsHuge"],
-    ["qb-raidBig", "raidBig"],
-    ["qb-raidHuge", "raidHuge"],
-    ["qb-monthsBig", "monthsBig"],
-    ["qb-giftHuge", "giftHuge"],
-    ["qb-currency", "currency"],
-  ];
-  function buildUrl(): void {
-    const page = $<HTMLSelectElement>("qb-page").value;
-    const url = new URL(page, location.href);
-    for (const [id, param] of QB_FIELDS) {
-      const value = $<HTMLInputElement>(id).value.trim();
-      if (value) {
-        url.searchParams.set(param, value);
-      }
-    }
-    $<HTMLInputElement>("qb-url").value = url.href;
-  }
-  QB_FIELDS.forEach(([id]) =>
-    $<HTMLInputElement>(id).addEventListener("input", buildUrl),
-  );
-  $<HTMLSelectElement>("qb-page").addEventListener("change", buildUrl);
-  buildUrl();
-
   function copyField(id: string): void {
     const field = $<HTMLInputElement | HTMLTextAreaElement>(id);
     field.select();
@@ -167,7 +147,6 @@
       // clipboard permission denied; the field is still selected for a manual copy
     });
   }
-  $<HTMLButtonElement>("qb-copy").onclick = () => copyField("qb-url");
 
   // Tokens Streamlabs' Alert Box substitutes per alert type (verified against
   // github.com/neferent/streamlabs-custom-code-starter's real templates).

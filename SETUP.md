@@ -66,14 +66,15 @@ wait behind a raid in the queue, and you can position the two independently.
 ## 2. Connect Streamlabs (follows, subs, bits, raids, tips)
 
 Streamlabs' own Alert Box widget can run this repo's alert layout directly, no relay or ongoing
-connection needed. Each generated widget is a fixed type **and** tier (e.g. "Tip / Huge"), Streamlabs
-own condition system (per-variation, based on amount/months/whatever the alert type supports) is
-what decides which one fires, this repo doesn't compute a tier from the amount. Do this once per
-type/tier combination you actually want:
+connection needed. Each generated widget is a fixed type, tier **and** layout variant (e.g.
+"Tip / Huge / Jar"), Streamlabs' own condition system (per-variation, based on amount/months/
+whatever the alert type supports) is what decides which one fires, this repo doesn't compute a tier
+from the amount or rotate variants on its own here. Do this once per combination you actually want:
 
 1. Open [`control.html`](https://djzwackery.com/stream/control.html) and scroll to **Streamlabs
-   Alert Box code**. Pick a type (Follow / Sub / Resub / Gift sub / Bits / Raid / Tip) and a tier
-   (Small / Big / Huge) from the two dropdowns.
+   Alert Box code**. Pick a type (Follow / Sub / Resub / Gift sub / Bits / Raid / Tip), a tier
+   (Small / Big / Huge) and a layout variant from the three dropdowns (the variant list updates to
+   match the type, e.g. tip offers Receipt/Jar/Banner).
 2. In the Streamlabs dashboard (not Streamlabs Desktop, the web dashboard at streamlabs.com): open
    the **Alert Box** widget, pick the matching alert type, add a variation for this tier (or use the
    default one if you only want a single tier for this type), and enable **Custom HTML/CSS/JS**
@@ -85,7 +86,7 @@ type/tier combination you actually want:
 4. If you're using a variation for this tier, set that variation's own condition in Streamlabs (e.g.
    "amount ≥ 100") so it only fires for events that should render at this tier.
 5. Save, and trigger a test alert from Streamlabs' own dashboard to confirm it renders.
-6. Repeat for each other type/tier combination you want a distinct widget for.
+6. Repeat for each other type/tier/variant combination you want a distinct widget for.
 
 That's it, permanently, once all your widgets are pasted. Streamlabs re-renders this HTML fresh for
 every alert and handles queueing and duration itself, so there's no connection to keep alive, no
@@ -122,21 +123,21 @@ Two different things you might want to check, and they need two different setups
 separate-browser issue explained above:
 
 **Does the alert look right?** Open `https://djzwackery.com/stream/control.html` in a normal
-desktop browser tab, that's fine for this, nothing here needs a saved token. Every button fires
-into `control.html`'s own built-in preview pane, right there on the page, no OBS required:
+desktop browser tab, that's fine for this, nothing here needs a saved token. Fires into
+`control.html`'s own built-in preview pane, right there on the page, no OBS required:
 
-- Click **follow** / **sub** / **tip** / **bits** / **raid** / **redeem** individually, tune tier,
-  variant, name, value, message, or reward first.
-- **Run all 18 in sequence** cycles every type × variant combination automatically, six minutes
-  apart, good for a full run-through before going live.
-- The **URL builder** section generates a tuned `alerts.html?...` URL, e.g. a longer `duration` or
-  a different `top` offset, paste the result back into OBS's browser source URL field.
+- Pick **Type** first: **Tier**, **Variant**, **Message** and **Reward** all narrow down to only
+  the options that type actually uses (e.g. Variant only ever lists that type's own three, Reward
+  only enables for `redeem`), then **Fire**. Nothing here rotates or picks something different on
+  its own, so the same selections always produce the same alert.
+- **Run all 18 in sequence** is the deliberate exception: cycles every type × variant combination
+  automatically, six minutes apart, good for a full run-through before going live.
 
 **Does it actually reach OBS?** The desktop browser tab above can't answer this, it's a different
 browser from OBS's, see "Before you start". To check the real source: right-click the **Control
-panel** source you added in step 1 → **Interact**, and click the same buttons from there instead.
-Now you're firing from inside OBS's own browser, so it reaches the real Alerts/Redemptions sources
-too, watch them update live in the OBS preview.
+panel** source you added in step 1 → **Interact**, and use the same Type/Fire controls from there
+instead. Now you're firing from inside OBS's own browser, so it reaches the real
+Alerts/Redemptions sources too, watch them update live in the OBS preview.
 
 Or skip the control panel entirely: open the Alerts source's own **Interact** window and press
 **1**-**6** (follow / sub / tip / bits / raid / redeem), holding **shift** for the big tier or
@@ -152,7 +153,7 @@ going live that doesn't require triggering a real Twitch redemption to confirm t
 - **Rewards:** edit `public/rewards.json` and drop a GIF in `public/media/`, see README's "Point
   redemptions" section.
 - **Thresholds, duration, layout pinning:** all query-string flags on `alerts.html`, see README's
-  "Tuning, all via query string" section, or build the URL with `control.html`'s URL builder.
+  "Tuning, all via query string" section.
 
 ## Troubleshooting
 
