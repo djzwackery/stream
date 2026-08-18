@@ -185,8 +185,9 @@
     <p>
       One widget per type/tier/variant. Paste HTML → Streamlabs "HTML", CSS →
       "CSS", JS → "JS" (all three, its JS box can't run a
-      <code>&lt;script&gt;</code> tag). Set that widget's own condition in
-      Streamlabs.
+      <code>&lt;script&gt;</code> tag). Enter the API token once below, it's
+      baked into the JS box for you and remembered on this browser. Set that
+      widget's own condition in Streamlabs.
     </p>
     <div class="row">
       <label
@@ -208,6 +209,13 @@
         </select></label
       >
       <label>Variant<select id="sl-variant"></select></label>
+      <label
+        >API Token<input
+          id="sl-token"
+          type="password"
+          size="24"
+          placeholder="paste once"
+      /></label>
     </div>
     <div class="row">
       <textarea id="sl-html" readonly></textarea>

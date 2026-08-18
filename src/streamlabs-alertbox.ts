@@ -211,6 +211,12 @@ function buildEvent(
 const AVATAR_LOOKUP_URL =
   "https://zw-twitch-relay.djzwackery.workers.dev/twitch/avatar";
 const AVATAR_FETCH_TIMEOUT_MS = 1200;
+// Replace with the real token before pasting this into Streamlabs (ask
+// whoever deployed the Worker for it, see worker/README.md). This file
+// itself, including this literal placeholder, is served publicly from
+// djzwackery.com, so the real token can never live here in source, only
+// in the copy that actually gets pasted into your Streamlabs dashboard.
+const AVATAR_API_TOKEN = "PASTE_YOUR_AVATAR_API_TOKEN_HERE";
 
 /**
  * The relay Worker's `/twitch/avatar` response shape.
@@ -239,7 +245,10 @@ async function fetchTwitchAvatar(login: string): Promise<string | undefined> {
   try {
     const res = await fetch(
       `${AVATAR_LOOKUP_URL}?login=${encodeURIComponent(login)}`,
-      { signal: controller.signal },
+      {
+        signal: controller.signal,
+        headers: { Authorization: `Bearer ${AVATAR_API_TOKEN}` },
+      },
     );
     if (!res.ok) {
       return undefined;

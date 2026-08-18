@@ -87,7 +87,11 @@ export async function refreshAccessToken(
   return tokens;
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
+/**
+ * Constant-time string comparison, so a mismatch's response timing can't
+ * leak how many leading characters of a secret were guessed correctly.
+ */
+export function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
   }

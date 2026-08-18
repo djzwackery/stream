@@ -74,7 +74,10 @@ from the amount or rotate variants on its own here. Do this once per combination
 1. Open [`control.html`](https://djzwackery.com/stream/control.html) and scroll to **Streamlabs
    Alert Box code**. Pick a type (Follow / Sub / Resub / Gift sub / Bits / Raid / Tip), a tier
    (Small / Big / Huge) and a layout variant from the three dropdowns (the variant list updates to
-   match the type, e.g. tip offers Receipt/Jar/Banner).
+   match the type, e.g. tip offers Receipt/Jar/Banner). Paste the **API Token** you were given
+   (ask whoever set up the Worker, it isn't published anywhere) into the **API Token** field once;
+   without it, avatars won't resolve. It's remembered on this browser after that, and gets baked
+   into the JS box automatically, no manual editing needed.
 2. In the Streamlabs dashboard (not Streamlabs Desktop, the web dashboard at streamlabs.com): open
    the **Alert Box** widget, pick the matching alert type, add a variation for this tier (or use the
    default one if you only want a single tier for this type), and enable **Custom HTML/CSS/JS**
@@ -86,7 +89,8 @@ from the amount or rotate variants on its own here. Do this once per combination
 4. If you're using a variation for this tier, set that variation's own condition in Streamlabs (e.g.
    "amount ≥ 100") so it only fires for events that should render at this tier.
 5. Save, and trigger a test alert from Streamlabs' own dashboard to confirm it renders.
-6. Repeat for each other type/tier/variant combination you want a distinct widget for.
+6. Repeat for each other type/tier/variant combination you want a distinct widget for; the token
+   you entered in step 1 stays filled in for all of them.
 
 That's it, permanently, once all your widgets are pasted. Streamlabs re-renders this HTML fresh for
 every alert and handles queueing and duration itself, so there's no connection to keep alive, no

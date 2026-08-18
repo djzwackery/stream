@@ -66,11 +66,16 @@ Only needs doing once per deployment, not per stream.
    npx wrangler secret put TWITCH_CLIENT_SECRET
    npx wrangler secret put TWITCH_REFRESH_TOKEN
    npx wrangler secret put TWITCH_WEBHOOK_SECRET   # any long random string you generate yourself, e.g. `openssl rand -hex 32`
+   npx wrangler secret put AVATAR_API_TOKEN        # another one, separate from the above
    ```
 
-   `TWITCH_WEBHOOK_SECRET` isn't from Twitch, it's a secret you invent and reuse in step 7 below,
-   Twitch signs every webhook delivery with it so the Worker can tell a real notification from a
-   forged one.
+   `TWITCH_WEBHOOK_SECRET` and `AVATAR_API_TOKEN` aren't from Twitch, they're secrets you invent
+   yourself (`openssl rand -hex 32` again is fine). `TWITCH_WEBHOOK_SECRET` is reused in step 7
+   below, Twitch signs every webhook delivery with it so the Worker can tell a real notification
+   from a forged one. `AVATAR_API_TOKEN` gates `GET /twitch/avatar` (see the Security model section
+   below): give it to whoever's pasting the Streamlabs Alert Box code, they paste it into the JS
+   box in place of the `PASTE_YOUR_AVATAR_API_TOKEN_HERE` placeholder
+   ([`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)) before it goes into Streamlabs.
 
 6. **Deploy:**
 
@@ -156,6 +161,7 @@ TWITCH_CLIENT_ID=...
 TWITCH_CLIENT_SECRET=...
 TWITCH_REFRESH_TOKEN=...
 TWITCH_WEBHOOK_SECRET=...
+AVATAR_API_TOKEN=...
 ```
 
 Scheduled Workers don't fire on a timer during local dev; trigger the Cron handler manually with
@@ -186,15 +192,24 @@ every delivery's HMAC-SHA256 signature is verified against `TWITCH_WEBHOOK_SECRE
 payload is trusted (`verifyWebhookSignature` in `src/twitch.ts`), using a constant-time comparison
 so response timing can't leak the expected signature.
 
-`GET /twitch/avatar` has no origin check at all, deliberately: it's called from the Streamlabs
-Alert Box widget's own origin (Streamlabs-controlled, not `djzwackery.com`), so `Origin`/`Referer`
-checking against our own domain would just break the feature. What it returns, a public Twitch
-avatar URL for a given login, is exactly what Twitch's own API already hands anyone who asks, so
-there's no real access control being given up by leaving it open. What it does need protecting
-from is volume, not identity, since it's a free proxy to an external API for anyone who finds it:
-`AVATAR_RATE_LIMITER` (`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on
-every plan) caps it at 20 requests/minute per IP, on top of input validation rejecting anything
-that doesn't look like a real Twitch username.
+`GET /twitch/avatar` has no origin check, deliberately: it's called from the Streamlabs Alert Box
+widget's own origin (Streamlabs-controlled, not `djzwackery.com`), so `Origin`/`Referer` checking
+against our own domain would just break the feature. Unlike `/ws` and `/status` though, this one
+isn't left fully open either: it's gated on `AVATAR_API_TOKEN`, a bearer token checked with a
+constant-time comparison (`timingSafeEqual` in `src/twitch.ts`), shared out-of-band with whoever
+pastes the Streamlabs code, not committed anywhere and never present in the public bundle (see
+`AVATAR_API_TOKEN`'s doc in `src/streamlabs-alertbox.ts` for how the placeholder that _does_ ship
+publicly gets swapped for the real thing only in the copy that reaches Streamlabs). Be honest about
+what this does and doesn't buy: it's real access control against a stranger who stumbles on the
+endpoint with no token at all, but it isn't a secret in the cryptographic sense once it's pasted
+into a specific streamer's own Streamlabs dashboard, since that streamer (or anyone with access to
+their OBS/Streamlabs setup) can view-source the pasted JS same as any client-side code. That's an
+acceptable tradeoff here: the token is shared deliberately with a trusted party for the widget to
+work at all, not something being protected from them. What it does meaningfully stop is casual
+discovery by anyone who isn't that streamer. On top of the token, `AVATAR_RATE_LIMITER`
+(`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on every plan) caps
+requests at 20/minute per IP, so even a leaked token can't turn this into an unmetered proxy to
+Twitch's API, and input validation rejects anything that doesn't look like a real Twitch username.
 
 Every endpoint reachable from a browser sends `Access-Control-Allow-Origin`, not just the origin
 checks above: those decide _whether_ to answer a cross-origin request, this header is the separate

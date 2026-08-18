@@ -9,6 +9,7 @@ import {
   loadTokens,
   mapRedemptionEvent,
   refreshAccessToken,
+  timingSafeEqual,
   verifyWebhookSignature,
 } from "./twitch.js";
 
@@ -46,6 +47,11 @@ export interface Env {
    * Caps `/twitch/avatar` requests per IP, the one endpoint with no origin check.
    */
   AVATAR_RATE_LIMITER: RateLimit;
+  /**
+   * Bearer token gating `/twitch/avatar`, shared out-of-band with whoever pastes the
+   * Streamlabs Alert Box code (see worker/README.md), not something the public ever sees.
+   */
+  AVATAR_API_TOKEN: string;
 }
 
 /**
@@ -139,17 +145,25 @@ const AVATAR_CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
 /**
  * Resolves a Twitch login to their current avatar URL, for the Streamlabs
  * Alert Box driver, which gets no reliable avatar token from Streamlabs
- * itself. Deliberately not origin-gated like `/ws` and `/status`: the
- * Alert Box widget runs on a Streamlabs-controlled origin, not
- * djzwackery.com, and what this returns, a public Twitch avatar URL, is
- * exactly what Twitch's own API already hands out to anyone who asks, so
- * there's no real access control an origin check would add here. What
- * this does need protecting from is volume, not identity: an IP-keyed
- * rate limit (`AVATAR_RATE_LIMITER`, `wrangler.toml`) is what actually
- * guards this, since it's the one thing this Worker exposes that could be
- * abused as a free proxy to an external API otherwise.
+ * itself. Not origin-gated like `/ws` and `/status`: the Alert Box widget
+ * runs on a Streamlabs-controlled origin, not djzwackery.com, so
+ * `Origin`/`Referer` checking against our own domain isn't meaningful
+ * here. Gated instead on `AVATAR_API_TOKEN`, a bearer token shared
+ * out-of-band with whoever pastes the Streamlabs code (never committed,
+ * never present in the public bundle, see `AVATAR_API_TOKEN`'s doc in
+ * `src/streamlabs-alertbox.ts`), plus an IP-keyed rate limit
+ * (`AVATAR_RATE_LIMITER`, `wrangler.toml`) as a second layer, since even a
+ * token that leaks out of one streamer's own Streamlabs setup shouldn't
+ * turn this into an unmetered proxy to Twitch's API.
  */
 async function handleAvatar(request: Request, env: Env): Promise<Response> {
+  const auth = request.headers.get("Authorization") ?? "";
+  if (!timingSafeEqual(auth, `Bearer ${env.AVATAR_API_TOKEN}`)) {
+    return new Response("Forbidden", {
+      status: 403,
+      headers: AVATAR_CORS_HEADERS,
+    });
+  }
   const login = new URL(request.url).searchParams.get("login") ?? "";
   if (!LOGIN_PATTERN.test(login)) {
     return new Response("Invalid login", {

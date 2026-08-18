@@ -332,15 +332,46 @@
   fillSlVariants();
   updateStreamlabsCode();
 
+  // Matches the placeholder streamlabs-alertbox.ts ships with (that file's
+  // own source is the other place this exact string is defined).
+  const AVATAR_TOKEN_PLACEHOLDER = "PASTE_YOUR_AVATAR_API_TOKEN_HERE";
+  const AVATAR_TOKEN_STORAGE_KEY = "zw-avatar-api-token";
+
   // The JS box doesn't vary per type, streamlabs-alertbox.ts reads the type
   // off data-alert-type in the HTML box at run time, so it's fetched once.
   // Streamlabs' JS box runs the pasted script standalone, it can't resolve
   // `import`s, so this is the esbuild-bundled, self-contained build, not
-  // tsc's own module output.
+  // tsc's own module output. Kept as-fetched here, separate from what's
+  // shown: the token substitution below re-derives the displayed value
+  // from this each time rather than mutating it in place.
+  let slJsBundle = "";
+
+  function renderSlJs(): void {
+    const token = $<HTMLInputElement>("sl-token").value.trim();
+    $<HTMLTextAreaElement>("sl-js").value = token
+      ? slJsBundle.replace(AVATAR_TOKEN_PLACEHOLDER, token)
+      : slJsBundle;
+  }
+
+  const savedToken = localStorage.getItem(AVATAR_TOKEN_STORAGE_KEY);
+  if (savedToken) {
+    $<HTMLInputElement>("sl-token").value = savedToken;
+  }
+  $<HTMLInputElement>("sl-token").addEventListener("input", () => {
+    const value = $<HTMLInputElement>("sl-token").value.trim();
+    if (value) {
+      localStorage.setItem(AVATAR_TOKEN_STORAGE_KEY, value);
+    } else {
+      localStorage.removeItem(AVATAR_TOKEN_STORAGE_KEY);
+    }
+    renderSlJs();
+  });
+
   fetch("js/streamlabs-alertbox.bundle.js", { cache: "no-store" })
     .then((r) => r.text())
     .then((js) => {
-      $<HTMLTextAreaElement>("sl-js").value = js;
+      slJsBundle = js;
+      renderSlJs();
     })
     .catch(() =>
       console.warn(
