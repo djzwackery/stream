@@ -38,14 +38,17 @@ function cleanText(raw: string | null | undefined): string {
 }
 
 /**
- * Reads one `[data-token]` span's text from `#zw-tokens`' own direct
- * children only (`>`, not a descendant selector), so it can't accidentally
+ * Reads one `[data-token]` span's text from `tokens`' own direct children
+ * only (`:scope >`, not a descendant selector), so it can't accidentally
  * match Streamlabs' own reused `data-token` markup nested inside `img`/
- * `messageTemplate`/`userMessage` (see `readRichText`).
+ * `messageTemplate`/`userMessage` (see `readRichText`). Scoped to the
+ * already-captured `tokens` element rather than a fresh `document`-wide
+ * lookup by id, since re-querying by id repeatedly (as `render()`'s polling
+ * does) isn't guaranteed to keep resolving to the same node.
  */
-function readToken(name: string): string {
-  const el = document.querySelector<HTMLElement>(
-    `#zw-tokens > [data-token="${name}"]`,
+function readToken(tokens: Element, name: string): string {
+  const el = tokens.querySelector<HTMLElement>(
+    `:scope > [data-token="${name}"]`,
   );
   return cleanText(el?.textContent);
 }
@@ -67,8 +70,8 @@ function readRichText(elementId: string): string {
  * `data-token="name"` markup for a letter-reveal animation), which testing
  * has shown to arrive even when the standalone token didn't.
  */
-function readName(): string {
-  const direct = readToken("name");
+function readName(tokens: Element): string {
+  const direct = readToken(tokens, "name");
   if (direct) {
     return direct;
   }
@@ -88,13 +91,16 @@ function parseAmount(raw: string): number {
 }
 
 function buildEvent(
+  tokens: Element,
   boxType: StreamlabsAlertBoxType,
   tier: AlertTier,
 ): AlertStageEvent {
-  const name = readName() || "someone";
+  const name = readName(tokens) || "someone";
   const avatar = readAvatar();
   const message =
-    readRichText("alert-user-message") || readToken("message") || undefined;
+    readRichText("alert-user-message") ||
+    readToken(tokens, "message") ||
+    undefined;
   // Streamlabs only fills this in when the streamer has set a custom
   // "Message Template" for this alert type in their own dashboard (unset
   // otherwise); when set, it's meant to replace the default one-liner
@@ -122,7 +128,7 @@ function buildEvent(
     };
   }
   if (boxType === "resub") {
-    const months = parseAmount(readToken("amount")) || 1;
+    const months = parseAmount(readToken(tokens, "amount")) || 1;
     return {
       type: "sub",
       name,
@@ -140,9 +146,9 @@ function buildEvent(
     // No explicit anonymous/community flag from Streamlabs, so an absent or
     // "anonymous" {name} means an anonymous gifter, and {count} above 1
     // means a community gift rather than one aimed at a specific viewer.
-    const rawName = readToken("name");
+    const rawName = readToken(tokens, "name");
     const isAnonymous = !rawName || /^anonymous$/i.test(rawName);
-    const count = parseAmount(readToken("count")) || 1;
+    const count = parseAmount(readToken(tokens, "count")) || 1;
     const isCommunity = count > 1;
     return {
       type: "sub",
