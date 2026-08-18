@@ -3,10 +3,8 @@
 A small Cloudflare Worker that relays Twitch Channel Point redemptions to `redemptions.html` and
 looks up real Twitch avatars for the Streamlabs Alert Box driver, so a streamer using this repo
 never has to hold a Twitch token themselves or reconnect anything before going live. See the root
-[README.md](../README.md#-wiring-real-events) and
-[SETUP.md](../SETUP.md#3-twitch-channel-point-redemptions) for how this fits into the rest of the
-repo; this file is the deploy-it-once checklist and the security write-up, for whoever maintains
-the repo, not something a streamer using it needs to read.
+[README.md](../README.md#-wiring-real-events) for how this fits into the rest of the repo; this
+file is the deploy-it-once checklist and the security write-up.
 
 ```
 Twitch  --(EventSub webhook, HMAC-signed POST)-->  Worker  --(broadcast)-->  Hub (Durable Object)  --(WebSocket)-->  redemptions.html
@@ -69,17 +67,17 @@ Only needs doing once per deployment, not per stream.
    npx wrangler secret put API_TOKEN
    ```
 
-   | Secret                  | Where it comes from                                    |
-   | ------------------------ | -------------------------------------------------------- |
-   | `TWITCH_CLIENT_ID`       | The Twitch application (step 2).                          |
-   | `TWITCH_CLIENT_SECRET`   | The Twitch application (step 2).                          |
-   | `TWITCH_REFRESH_TOKEN`   | The auth script's output (step 4).                        |
-   | `TWITCH_WEBHOOK_SECRET`  | Invent it yourself, e.g. `openssl rand -hex 32`.          |
-   | `API_TOKEN`              | Invent it yourself, e.g. `openssl rand -hex 32`.          |
+   | Secret                  | Where it comes from                              |
+   | ----------------------- | ------------------------------------------------ |
+   | `TWITCH_CLIENT_ID`      | The Twitch application (step 2).                 |
+   | `TWITCH_CLIENT_SECRET`  | The Twitch application (step 2).                 |
+   | `TWITCH_REFRESH_TOKEN`  | The auth script's output (step 4).               |
+   | `TWITCH_WEBHOOK_SECRET` | Invent it yourself, e.g. `openssl rand -hex 32`. |
+   | `API_TOKEN`             | Invent it yourself, e.g. `openssl rand -hex 32`. |
 
    `TWITCH_WEBHOOK_SECRET` is reused in step 7 below: Twitch signs every webhook delivery with it
-   so the Worker can tell a real notification from a forged one. `API_TOKEN` gates `GET
-   /twitch/avatar` and `POST /twitch/refresh` (see the Security model section below): give it to
+   so the Worker can tell a real notification from a forged one. `API_TOKEN` gates two endpoints,
+   `/twitch/avatar` and `/twitch/refresh` (see the Security model section below): give it to
    whoever's pasting the Streamlabs Alert Box code, they paste it into the JS box in place of the
    `PASTE_YOUR_API_TOKEN_HERE` placeholder ([`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts))
    before it goes into Streamlabs (`control.html`'s own **API Token** field does this substitution
@@ -88,13 +86,15 @@ Only needs doing once per deployment, not per stream.
 
 6. **Deploy:**
 
-   If this Cloudflare account has never deployed a Worker before, do this part interactively, from
-   your own terminal, once, before wiring up CI: `npx wrangler login` (opens a browser), then
-   `npx wrangler deploy`. It'll ask _"Would you like to register a workers.dev subdomain now?"_,
-   answer yes and pick one, that's a permanent, account-wide, one-time choice, which is why it's a
-   prompt rather than something `deploy-worker.yml` could do unattended in CI (a non-interactive
-   `wrangler deploy` just fails with "You need to register a workers.dev subdomain" if this hasn't
-   happened yet). Once it's registered, every deploy after this, interactive or not, just works.
+   > [!IMPORTANT]
+   > If this Cloudflare account has never deployed a Worker before, do this part interactively,
+   > from your own terminal, once, before wiring up CI: `npx wrangler login` (opens a browser),
+   > then `npx wrangler deploy`. It'll ask _"Would you like to register a workers.dev subdomain
+   > now?"_, answer yes and pick one, that's a permanent, account-wide, one-time choice, which is
+   > why it's a prompt rather than something `deploy-worker.yml` could do unattended in CI (a
+   > non-interactive `wrangler deploy` just fails with "You need to register a workers.dev
+   > subdomain" if this hasn't happened yet). Once it's registered, every deploy after this,
+   > interactive or not, just works.
 
    ```bash
    npm run deploy
@@ -154,7 +154,7 @@ That's the whole one-time setup. From here, the Worker refreshes its own Twitch 
 Cron Trigger every 3 hours, see `wrangler.toml`) and nothing above needs repeating unless you
 rotate the Twitch app's credentials.
 
-## Local development
+## 💻 Local development
 
 ```bash
 npm run dev         # wrangler dev, local simulated KV/Durable Object, on http://localhost:8787
@@ -175,56 +175,19 @@ API_TOKEN=...
 Scheduled Workers don't fire on a timer during local dev; trigger the Cron handler manually with
 `curl http://localhost:8787/cdn-cgi/local/scheduled`.
 
-## Security model (is this safe to host on GitHub Pages?)
+## 🔒 Security model
 
-Yes for what matters: `TWITCH_CLIENT_SECRET` and the rotating `TWITCH_REFRESH_TOKEN` never leave
-this Worker, used only in its own outbound calls to Twitch (`refreshAccessToken` in
-[`src/twitch.ts`](src/twitch.ts)), never returned by any endpoint or embedded in anything shipped to
-`public/`. That holds regardless of GitHub Pages being fully public, since the secret material and
-the public static site are two entirely separate deployments that only ever exchange a read-only
-event stream.
-
-`GET /ws` checks `Origin`/`Referer` against `djzwackery.com` (and `localhost`, for local dev). This
-is **not real access control**, it's a soft speed bump: GitHub Pages serves plain, readable
-JavaScript, so there's no way to embed a real shared secret in the browser-side code that a
-determined visitor couldn't just read back out and reuse, and headers like `Origin` can be spoofed
-by anyone deliberately crafting requests outside a browser. What the check actually stops is casual
-drive-by discovery of the endpoint from unrelated sites, nothing more. What it protects if bypassed:
-read-only visibility into a channel's own Twitch redemptions, the same events already broadcast to
-every viewer a few seconds later on stream. Bypassing it doesn't expose a token, doesn't let anyone
-take an action, and doesn't touch the Twitch account, so the gap is accepted rather than closed with
-a bearer token here too, which would mean putting a secret in every OBS Redemptions source's own
-URL, reintroducing the setup friction this design exists to remove.
-
-The webhook endpoint (`POST /twitch/webhook`) is authenticated properly, not just origin-checked:
-every delivery's HMAC-SHA256 signature is verified against `TWITCH_WEBHOOK_SECRET` before its
-payload is trusted (`verifyWebhookSignature` in `src/twitch.ts`), using a constant-time comparison
-so response timing can't leak the expected signature.
-
-`GET /twitch/avatar` has no origin check, deliberately: it's called from the Streamlabs Alert Box
-widget's own origin (Streamlabs-controlled, not `djzwackery.com`), so `Origin`/`Referer` checking
-against our own domain would just break the feature. Unlike `/ws` though, this one isn't left fully
-open either: it's gated on `API_TOKEN`, a bearer token checked with a constant-time comparison
-(`timingSafeEqual` in `src/twitch.ts`), shared out-of-band with whoever pastes the Streamlabs code,
-not committed anywhere and never present in the public bundle (see `API_TOKEN`'s doc in
-`src/streamlabs-alertbox.ts` for how the placeholder that _does_ ship publicly gets swapped for the
-real thing only in the copy that reaches Streamlabs). `POST /twitch/refresh` (the manual trigger for
-the same token refresh the Cron runs every 3 hours, meant to be curled from a terminal) is gated the
-same way. Be honest about what the token does and doesn't buy: it's real access control against a
-stranger who stumbles on either endpoint with no token at all, but it isn't a secret in the
-cryptographic sense once it's pasted into a specific streamer's own Streamlabs dashboard, since that
-streamer (or anyone with access to their OBS/Streamlabs setup) can view-source the pasted JS same as
-any client-side code. That's an acceptable tradeoff here: the token is shared deliberately with a
-trusted party for the widget to work at all, not something being protected from them. What it does
-meaningfully stop is casual discovery by anyone who isn't that streamer. On top of the token,
-`AVATAR_RATE_LIMITER` (`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on
-every plan) caps `/twitch/avatar` requests at 20/minute per IP, so even a leaked token can't turn
-this into an unmetered proxy to Twitch's API, and input validation rejects anything that doesn't
-look like a real Twitch username.
-
-Every endpoint reachable from a browser and gated on `API_TOKEN` sends `Access-Control-Allow-Origin:
-*`, since it's the token, not the origin, deciding who's allowed in; skipping this would make those
-calls fail from any real cross-origin browser call regardless of whether the token was right. Their
-`OPTIONS` preflight (triggered by the `Authorization` header itself, not a "simple" header a browser
-sends without asking first) is answered the same way, before the token check ever runs, since a
-preflight never carries the real header it's asking permission to send.
+- `TWITCH_CLIENT_SECRET`/`TWITCH_REFRESH_TOKEN` never leave the Worker and are never returned by
+  any endpoint, so GitHub Pages being fully public doesn't expose them.
+- `GET /ws`: origin-checked against `djzwackery.com`/`localhost` only, spoofable, not real auth.
+  Good enough here since it only gates read-only redemption events already visible to viewers.
+- `POST /twitch/webhook`: real auth, HMAC-SHA256 verified against `TWITCH_WEBHOOK_SECRET`
+  (`verifyWebhookSignature` in `src/twitch.ts`), constant-time compared.
+- `GET /twitch/avatar` / `POST /twitch/refresh`: no origin check (avatar is called from
+  Streamlabs' own origin, not ours), gated on `API_TOKEN` instead (`timingSafeEqual` compared).
+  Real access control against a stranger, not cryptographically secret once pasted into a
+  streamer's own Streamlabs dashboard, since they can view-source it like any client code.
+  `AVATAR_RATE_LIMITER` caps `/twitch/avatar` at 20/min/IP on top of that.
+- Every `API_TOKEN`-gated endpoint sends `Access-Control-Allow-Origin: *` and answers its own
+  `OPTIONS` preflight before the token check runs, since a preflight never carries the real
+  `Authorization` header.

@@ -75,7 +75,9 @@ export async function refreshAccessToken(
     }),
   });
   if (!res.ok) {
-    throw new Error(`Twitch token refresh failed (${res.status})`);
+    throw new Error(
+      `Twitch token refresh failed (${res.status}): ${await res.text()}`,
+    );
   }
   const data = (await res.json()) as TwitchTokenResponse;
   const tokens: StoredTwitchTokens = {

@@ -2,8 +2,7 @@
 
 Browser-source overlays for OBS, Streamlabs, and similar broadcast software, written in TypeScript
 and compiled to plain `<script>`s so each page stays a drop-in file with no build step for the
-browser source itself. Setting up OBS and wiring up real events? See [SETUP.md](SETUP.md) for the
-step-by-step walkthrough; this file is the reference.
+browser source itself.
 
 ```
 public/                 everything your broadcast software, GitHub Pages and the release zip actually need
@@ -116,8 +115,8 @@ can run this repo's alert layout directly.
 HTML/CSS/JS box per type/tier/variant combination
 ([`src/streamlabs-alertbox.ts`](src/streamlabs-alertbox.ts) is what the JS box is); paste all
 three into the matching Alert Box type (and variation, for a specific tier) in the Streamlabs
-dashboard, see [SETUP.md](SETUP.md) for the click-by-click walkthrough. Streamlabs re-renders the
-pasted HTML fresh for every alert and handles queueing/duration itself, so once it's pasted
+dashboard. Streamlabs re-renders the pasted HTML fresh for every alert and handles queueing/duration
+itself, so once it's pasted
 there's nothing left running to reconnect, ever. Streamlabs' events don't carry a real per-viewer
 avatar, so the driver looks one up live from Twitch through the relay Worker
 ([`worker/`](worker/README.md)) by matching the display name to a Twitch login, falling back to
