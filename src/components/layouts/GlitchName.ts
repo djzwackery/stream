@@ -28,7 +28,7 @@ export function GlitchName({
             textShadow: "3px 3px 0 var(--void)",
           },
         },
-        t.eyebrow,
+        e.headline || t.eyebrow,
       ),
     el(
       "div",

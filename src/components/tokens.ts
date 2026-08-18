@@ -229,7 +229,7 @@ export const MOTION: Record<string, [string, string]> = {
   ],
   drop: [
     "zwa-drop-in 0.5s cubic-bezier(0.2,0.9,0.25,1) both",
-    "zwa-drop-out 0.4s steps(3, end) both",
+    "zwa-drop-out 0.4s cubic-bezier(0.4,0,1,1) both",
   ],
 };
 

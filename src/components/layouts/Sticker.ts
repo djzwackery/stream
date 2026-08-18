@@ -34,7 +34,8 @@ export function Sticker({
     el(
       "div",
       null,
-      !hideEyebrow && el("div", { style: label(s * 0.95) }, t.eyebrow),
+      !hideEyebrow &&
+        el("div", { style: label(s * 0.95) }, e.headline || t.eyebrow),
       el(
         "div",
         { style: { ...display(s, 3.1), marginTop: `${0.5 * s}rem` } },

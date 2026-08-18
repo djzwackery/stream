@@ -28,7 +28,7 @@ export function Slab({ e, s, tone, t, hideEyebrow }: LayoutProps): HTMLElement {
           ...label(s),
         },
       },
-      el("span", null, hideEyebrow ? t.verb : t.eyebrow),
+      el("span", null, hideEyebrow ? t.verb : e.headline || t.eyebrow),
       el("span", null, e.detail || t.verb),
     ),
     el(

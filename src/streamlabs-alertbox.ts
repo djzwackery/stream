@@ -66,9 +66,20 @@ function buildEvent(
   const name = readToken("name") || "someone";
   const avatar = readAvatar();
   const message = readToken("userMessage") || readToken("message") || undefined;
+  // Streamlabs only fills this in when the streamer has set a custom
+  // "Message Template" for this alert type in their own dashboard (unset
+  // otherwise); when set, it's meant to replace the default one-liner
+  // below it, that's the whole point of the streamer configuring it.
+  const messageTemplate = readToken("messageTemplate") || undefined;
 
   if (boxType === "follow") {
-    return { type: "follow", name, avatar, detail: "just followed", tier };
+    return {
+      type: "follow",
+      name,
+      avatar,
+      detail: messageTemplate || "just followed",
+      tier,
+    };
   }
   if (boxType === "sub") {
     return {
@@ -76,7 +87,7 @@ function buildEvent(
       name,
       avatar,
       message,
-      detail: "Tier 1 · 1 month",
+      detail: messageTemplate || "Tier 1 · 1 month",
       amount: "1",
       tier,
     };
@@ -88,20 +99,35 @@ function buildEvent(
       name,
       avatar,
       message,
-      detail: `Tier 1 · ${months} ${months === 1 ? "month" : "months"}`,
+      headline: "Resub",
+      detail:
+        messageTemplate ||
+        `Tier 1 · ${months} ${months === 1 ? "month" : "months"}`,
       amount: String(months),
       tier,
     };
   }
   if (boxType === "giftsub") {
+    // Streamlabs gives no explicit anonymous/community flag for this type,
+    // just {name} (substituted with "Anonymous", or left absent) and
+    // {count}: an absent/"anonymous" name means an anonymous gifter, and a
+    // count above 1 means a community gift (several subs at once, to no
+    // one viewer in particular) rather than one gifted at a specific
+    // viewer, the only two things distinguishing the four real gift
+    // scenarios from each other with the data this type actually gets.
+    const rawName = readToken("name");
+    const isAnonymous = !rawName || /^anonymous$/i.test(rawName);
     const count = parseAmount(readToken("count")) || 1;
+    const isCommunity = count > 1;
     return {
       type: "sub",
-      name,
-      avatar,
-      detail: `${count} subs gifted`,
-      amount: `×${count}`,
-      headline: "Gifted",
+      name: isAnonymous ? "An anonymous gifter" : rawName,
+      avatar: isAnonymous ? undefined : avatar,
+      headline: isCommunity ? "Community gift" : "Gifted sub",
+      detail: isCommunity
+        ? `${count} subs gifted to the community`
+        : "gifted a sub",
+      amount: isCommunity ? `×${count}` : undefined,
       tier,
     };
   }
@@ -113,7 +139,7 @@ function buildEvent(
       avatar,
       message,
       amount: `${fmt(amount)} bits`,
-      detail: "cheered",
+      detail: messageTemplate || "cheered",
       tier,
     };
   }
@@ -124,7 +150,9 @@ function buildEvent(
       name,
       avatar,
       party,
-      detail: `${party} ${party === 1 ? "mate in tow" : "mates in tow"}`,
+      detail:
+        messageTemplate ||
+        `${party} ${party === 1 ? "mate in tow" : "mates in tow"}`,
       amount: String(party),
       headline: "Incoming raid",
       tier,
@@ -137,21 +165,42 @@ function buildEvent(
     avatar,
     message,
     amount: `$${amount}`,
-    detail: "chucked in",
+    detail: messageTemplate || "chucked in",
     tier,
   };
 }
 
-const tokens = document.getElementById("zw-tokens");
-const boxType = tokens?.dataset.alertType as StreamlabsAlertBoxType | undefined;
-const tier = (tokens?.dataset.tier as AlertTier | undefined) || "big";
-const variant = tokens?.dataset.variant || undefined;
-const root = document.getElementById("root");
-if (boxType && root) {
+const MAX_NAME_RETRIES = 6;
+const RETRY_DELAY_MS = 50;
+
+/**
+ * Streamlabs replays this same loaded page for every alert rather than a
+ * fresh navigation each time, and doesn't guarantee `{name}` is already
+ * substituted into the DOM the instant this script runs on a replay, only
+ * that it eventually is; a single synchronous read can catch it mid-swap
+ * and fall back to "someone" even for a real, named event. Retrying a
+ * few times over a fraction of a second is cheap against a 5s alert and
+ * avoids that race without assuming anything about its exact timing.
+ */
+function render(attempt = 0): void {
+  const tokens = document.getElementById("zw-tokens");
+  const boxType = tokens?.dataset.alertType as
+    StreamlabsAlertBoxType | undefined;
+  const root = document.getElementById("root");
+  if (!tokens || !boxType || !root) {
+    console.error(
+      "[zw] streamlabs-alertbox.js: missing #zw-tokens[data-alert-type] or #root",
+    );
+    return;
+  }
+  if (!readToken("name") && attempt < MAX_NAME_RETRIES) {
+    setTimeout(() => render(attempt + 1), RETRY_DELAY_MS);
+    return;
+  }
+  const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
+  const variant = tokens.dataset.variant || undefined;
   const stage = new AlertStage(root, { top: TOP_OFFSET, onDone: () => {} });
   stage.show({ ...buildEvent(boxType, tier), variant }, DURATION);
-} else {
-  console.error(
-    "[zw] streamlabs-alertbox.js: missing #zw-tokens[data-alert-type] or #root",
-  );
 }
+
+render();

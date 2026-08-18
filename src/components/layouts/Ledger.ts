@@ -49,7 +49,7 @@ export function Ledger({
           el(
             "div",
             { style: { ...label(s * 0.9), color: `var(${tone})` } },
-            t.eyebrow,
+            e.headline || t.eyebrow,
           ),
         el(
           "div",

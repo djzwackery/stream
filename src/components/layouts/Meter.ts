@@ -56,7 +56,7 @@ export function Meter({
             el(
               "div",
               { style: { ...label(s * 0.85), color: `var(${tone})` } },
-              t.eyebrow,
+              e.headline || t.eyebrow,
             ),
           el(
             "div",
