@@ -17,6 +17,9 @@ export function Squad({
   t,
   hideEyebrow,
 }: LayoutProps): HTMLElement {
+  // Real raids only ever give a leader; extra tiles fall back to Avatar's
+  // placeholder glyph, approximating a crowd without faking identities.
+  const avatars = e.party_avatars?.length ? e.party_avatars : [e.avatar];
   const n = Math.min(e.party || 6, 6);
   const tile = 58 * s;
   return el(
@@ -71,10 +74,11 @@ export function Squad({
             },
           },
           Avatar({
-            src: e.party_avatars?.[i],
+            src: avatars[i],
             size: tile,
             ring: "--void",
             s: s * 0.8,
+            placeholder: "person",
           }),
         ),
       ),

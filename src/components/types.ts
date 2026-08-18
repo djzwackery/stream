@@ -54,7 +54,7 @@ export interface LayoutProps {
  */
 export interface AvatarProps {
   /**
-   * Profile image URL; shows a placeholder glyph when absent.
+   * Profile image URL; shows a placeholder when absent.
    */
   src?: string;
   /**
@@ -69,6 +69,12 @@ export interface AvatarProps {
    * Size multiplier, scales the ring width and shadow offset.
    */
   s?: number;
+  /**
+   * Placeholder style when `src` is absent: "diamond" (default) or "person",
+   * a generic silhouette on a random brand tone, for approximating an
+   * unknown person rather than showing "no image at all".
+   */
+  placeholder?: "diamond" | "person";
 }
 
 /**

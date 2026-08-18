@@ -145,21 +145,13 @@ interface TwitchUserResponse {
 }
 
 const AVATAR_CACHE_TTL_SECONDS = 60 * 60 * 24;
-// Bump this to invalidate every cached avatar at once (e.g. after a bad
-// batch got cached before a bug fix): old entries become unreachable under
-// the new prefix and just expire off their own TTL, no KV cleanup needed.
+// Bump to invalidate every cached avatar at once; old entries just expire off their own TTL.
 const AVATAR_CACHE_VERSION = "v2";
 
 /**
- * Looks up a Twitch user's current profile image by login name, so the
- * Streamlabs Alert Box driver (which gets no reliable avatar token from
- * Streamlabs itself) can show a real photo. Caches a real result in KV
- * (including a genuine "not found", as an empty string) since the same
- * regulars redeem/follow repeatedly and avatars rarely change: a cache hit
- * costs one KV read instead of a Helix round trip. A failed request (an
- * expired access token, a Helix hiccup) isn't cached: caching that would
- * turn one transient failure into a full day of false "no avatar" for that
- * login, long after the underlying problem is gone.
+ * Looks up a Twitch user's avatar by login, caching the result (including a
+ * genuine "not found") for a day. A failed request isn't cached, so a
+ * transient error doesn't turn into a day of false "no avatar".
  */
 export async function getUserAvatar(
   kv: KVNamespace,
