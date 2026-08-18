@@ -105,16 +105,19 @@ load `alerts.html?test=raid&tier=huge`. In `redemptions.html` the test key is **
 **Streamlabs**, so that's the primary path; StreamElements is documented further down as an
 alternative for anyone forking this for a StreamElements-based setup instead.
 
-**Streamlabs (follows, subs, bits, raids, tips).** No relay page or connection to maintain:
-Streamlabs' own Alert Box widget has a native per-type "Custom HTML/CSS/JS" editor that can run
-this repo's alert layout directly.
+**Streamlabs (follows, subs, bits, raids, tips).** No relay page or persistent connection to
+maintain: Streamlabs' own Alert Box widget has a native per-type "Custom HTML/CSS/JS" editor that
+can run this repo's alert layout directly.
 [`control.html`](control.html)'s **Streamlabs Alert Box code** section generates a copy-pasteable
-HTML/CSS box per alert type ([`src/streamlabs-alertbox.ts`](src/streamlabs-alertbox.ts) is what
-that HTML loads); paste both boxes into the matching Alert Box type in the Streamlabs dashboard,
-once per type, see [SETUP.md](SETUP.md) for the click-by-click walkthrough. Streamlabs re-renders
-the pasted HTML fresh for every alert and handles queueing/duration itself, so once it's pasted
-there's nothing left running to reconnect, ever. Streamlabs' events don't reliably carry a profile
-image for every alert type, so some real alerts render the placeholder glyph instead of a photo.
+HTML/CSS/JS box per type/tier/variant combination
+([`src/streamlabs-alertbox.ts`](src/streamlabs-alertbox.ts) is what the JS box is); paste all
+three into the matching Alert Box type (and variation, for a specific tier) in the Streamlabs
+dashboard, see [SETUP.md](SETUP.md) for the click-by-click walkthrough. Streamlabs re-renders the
+pasted HTML fresh for every alert and handles queueing/duration itself, so once it's pasted
+there's nothing left running to reconnect, ever. Streamlabs' events don't carry a real per-viewer
+avatar, so the driver looks one up live from Twitch through the relay Worker
+([`worker/`](worker/README.md)) by matching the display name to a Twitch login, falling back to
+the placeholder glyph if that lookup doesn't match, is slow, or fails.
 
 **Twitch (Channel Point redemptions).** Streamlabs' Alert Box has no type for these at all, so
 `redemptions.html` gets them from a small Cloudflare Worker

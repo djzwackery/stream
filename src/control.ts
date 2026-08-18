@@ -202,9 +202,16 @@
   // either way, but a hardcoded 1920x1080 #root inside a smaller real box
   // centers against a canvas the box never actually shows, throwing off
   // the visible centering, follow's small non-takeover banner especially.
+  // #alert-image-wrap/#alert-text-wrap carry the img/messageTemplate/
+  // userMessage tokens Streamlabs appears to key off by id (see
+  // SL_RICH_TOKEN_IDS below), so they can't sit inside the `hidden`
+  // #zw-tokens div with the rest; hidden here with plain CSS instead, kept
+  // off-screen without relying on an attribute Streamlabs' own injection
+  // might treat differently.
   const SL_CSS = [
     "html,body{margin:0;height:100%;background:transparent;overflow:hidden}",
     "#root{position:fixed;inset:0;width:100%;height:100%;font-family:var(--font-body);color:var(--white)}",
+    "#alert-image-wrap,#alert-text-wrap{position:absolute;width:0;height:0;overflow:hidden;opacity:0;pointer-events:none}",
   ].join("\n");
 
   // Layout variant options per Streamlabs box type, mirroring
@@ -226,22 +233,65 @@
   // Alert Box variation and let Streamlabs' own condition (amount/months/
   // etc., set in its UI, not here) decide when that variation fires, same
   // idea as generating one widget per type already.
+  // img/messageTemplate/userMessage appear to be keyed off these specific
+  // element ids, not simple text substitution: Streamlabs' own default
+  // template uses exactly these ids, and removing an id from it stops that
+  // token substituting at all. The rest (name, amount, count, ...) go in
+  // the plain hidden token div, matching how they've substituted correctly
+  // there in testing.
+  const SL_RICH_TOKEN_IDS: Record<string, string> = {
+    img: "alert-image",
+    messageTemplate: "alert-message",
+    userMessage: "alert-user-message",
+  };
+
   function generateStreamlabsHtml(
     type: string,
     tier: string,
     variant: string,
   ): string {
     const tokens = SL_TOKENS[type] ?? [];
-    const spans = tokens
+    const richTokens = tokens.filter((t) => t in SL_RICH_TOKEN_IDS);
+    const simpleTokens = tokens.filter((t) => !(t in SL_RICH_TOKEN_IDS));
+
+    const richBlock = richTokens.length
+      ? [
+          richTokens.includes("img")
+            ? [
+                '<div id="alert-image-wrap">',
+                `  <div id="alert-image" data-token="img">{img}</div>`,
+                "</div>",
+              ].join("\n")
+            : "",
+          '<div id="alert-text-wrap">',
+          '  <div id="alert-text">',
+          richTokens.includes("messageTemplate")
+            ? `    <div id="alert-message" data-token="messageTemplate">{messageTemplate}</div>`
+            : "",
+          richTokens.includes("userMessage")
+            ? `    <div id="alert-user-message" data-token="userMessage">{userMessage}</div>`
+            : "",
+          "  </div>",
+          "</div>",
+        ]
+          .filter(Boolean)
+          .join("\n")
+      : "";
+
+    const simpleSpans = simpleTokens
       .map((t) => `    <span data-token="${t}">{${t}}</span>`)
       .join("\n");
+
     return [
       '<link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />',
+      richBlock,
       `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}" hidden>`,
-      spans,
+      simpleSpans,
       "</div>",
       '<div id="root"></div>',
-    ].join("\n");
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   function fillSlVariants(): void {

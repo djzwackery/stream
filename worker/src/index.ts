@@ -5,6 +5,7 @@
  */
 import { Hub } from "./hub.js";
 import {
+  getUserAvatar,
   loadTokens,
   mapRedemptionEvent,
   refreshAccessToken,
@@ -41,6 +42,10 @@ export interface Env {
    * Shared secret configured on the EventSub subscription, verifies webhook signatures.
    */
   TWITCH_WEBHOOK_SECRET: string;
+  /**
+   * Caps `/twitch/avatar` requests per IP, the one endpoint with no origin check.
+   */
+  AVATAR_RATE_LIMITER: RateLimit;
 }
 
 /**
@@ -102,10 +107,84 @@ async function handleStatus(request: Request, env: Env): Promise<Response> {
     loadTokens(env.TOKENS),
     hub(env).getStatus(),
   ]);
-  return Response.json({
-    twitch: { lastRefreshedAt: tokens?.refreshedAt ?? null },
-    hub: hubStatus,
-  });
+  return Response.json(
+    {
+      twitch: { lastRefreshedAt: tokens?.refreshedAt ?? null },
+      hub: hubStatus,
+    },
+    // Without this, status.html's cross-origin fetch (djzwackery.com calling
+    // a *.workers.dev origin) gets rejected client-side before it can even
+    // read the 200: the origin check above decides *whether* to answer,
+    // this header is what lets a browser accept an answer it already
+    // decided to give. Echoes the caller's own origin back rather than a
+    // static value: it's only ever reached after passing originAllowed, so
+    // this never widens who the origin check itself accepts.
+    {
+      headers: {
+        "Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
+      },
+    },
+  );
+}
+
+const LOGIN_PATTERN = /^[a-zA-Z0-9_]{1,25}$/;
+
+// Open to any origin, matching handleAvatar's own lack of an origin check
+// (see its doc below); every response here carries this, including the
+// error paths, without it a rejected request (bad login, rate limited)
+// fails as an opaque network error client-side instead of a readable
+// status the caller can branch on.
+const AVATAR_CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
+
+/**
+ * Resolves a Twitch login to their current avatar URL, for the Streamlabs
+ * Alert Box driver, which gets no reliable avatar token from Streamlabs
+ * itself. Deliberately not origin-gated like `/ws` and `/status`: the
+ * Alert Box widget runs on a Streamlabs-controlled origin, not
+ * djzwackery.com, and what this returns, a public Twitch avatar URL, is
+ * exactly what Twitch's own API already hands out to anyone who asks, so
+ * there's no real access control an origin check would add here. What
+ * this does need protecting from is volume, not identity: an IP-keyed
+ * rate limit (`AVATAR_RATE_LIMITER`, `wrangler.toml`) is what actually
+ * guards this, since it's the one thing this Worker exposes that could be
+ * abused as a free proxy to an external API otherwise.
+ */
+async function handleAvatar(request: Request, env: Env): Promise<Response> {
+  const login = new URL(request.url).searchParams.get("login") ?? "";
+  if (!LOGIN_PATTERN.test(login)) {
+    return new Response("Invalid login", {
+      status: 400,
+      headers: AVATAR_CORS_HEADERS,
+    });
+  }
+  // No origin check to key a rate limit off, so this keys off the caller's
+  // IP instead, the standard fallback for an endpoint anyone can call.
+  const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
+  const { success } = await env.AVATAR_RATE_LIMITER.limit({ key: ip });
+  if (!success) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: AVATAR_CORS_HEADERS,
+    });
+  }
+  const tokens = await loadTokens(env.TOKENS);
+  const avatarUrl = tokens
+    ? await getUserAvatar(
+        env.TOKENS,
+        env.TWITCH_CLIENT_ID,
+        tokens.accessToken,
+        login,
+      )
+    : null;
+  return Response.json(
+    { avatarUrl },
+    {
+      headers: {
+        ...AVATAR_CORS_HEADERS,
+        "Cache-Control": "public, max-age=3600",
+      },
+    },
+  );
 }
 
 export default {
@@ -122,6 +201,9 @@ export default {
     }
     if (url.pathname === "/status") {
       return handleStatus(request, env);
+    }
+    if (url.pathname === "/twitch/avatar") {
+      return handleAvatar(request, env);
     }
     return new Response("Not found", { status: 404 });
   },

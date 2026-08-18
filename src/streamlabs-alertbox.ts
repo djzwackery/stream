@@ -34,30 +34,61 @@ const fmt = (n: number): string =>
   String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 /**
- * Reads one `[data-token]` span's text, one of `#zw-tokens`' own direct
- * children only (`>`, not a descendant selector): Streamlabs' own
- * `{messageTemplate}` rendering reuses the exact same `data-token="name"`
- * attribute internally, for its own animated letter-by-letter markup
- * nested inside our `messageTemplate` span, so a descendant selector can
- * match that instead of our own top-level span for the same token name.
- * Streamlabs leaves a token's literal `{name}`-shaped placeholder in place
- * when it doesn't apply to this alert type or the platform didn't supply a
- * value, so anything still shaped like `{...}` is treated as absent, not
- * as data.
+ * Trims raw text and rejects anything still shaped like `{token}`: Streamlabs
+ * leaves a token's literal placeholder in place when it doesn't apply to
+ * this alert type or the platform didn't supply a value, so that shape
+ * means absent, not data.
+ */
+function cleanText(raw: string | null | undefined): string {
+  const text = raw?.trim() ?? "";
+  return text && !/^\{.*\}$/.test(text) ? text : "";
+}
+
+/**
+ * Reads one `[data-token]` span's text from `#zw-tokens`' own direct
+ * children only (`>`, not a descendant selector): the `img`/
+ * `messageTemplate`/`userMessage` tokens live outside this div entirely
+ * (see `readRichText`), but if they didn't, a descendant selector here
+ * could match Streamlabs' own reused `data-token` markup nested inside
+ * them instead of our own top-level span for the same token name.
  */
 function readToken(name: string): string {
   const el = document.querySelector<HTMLElement>(
     `#zw-tokens > [data-token="${name}"]`,
   );
-  const text = el?.textContent?.trim() ?? "";
-  if (!text || /^\{.*\}$/.test(text)) {
-    return "";
+  return cleanText(el?.textContent);
+}
+
+/**
+ * Reads `img`/`messageTemplate`/`userMessage` by the specific element id
+ * Streamlabs' own default template uses for each: substitution for these
+ * three appears to be keyed off the id itself, not simple text matching,
+ * confirmed by removing the id from Streamlabs' own template breaking it.
+ */
+function readRichText(elementId: string): string {
+  return cleanText(document.getElementById(elementId)?.textContent);
+}
+
+/**
+ * The name Streamlabs substitutes into our own standalone `{name}` token,
+ * or, if that's empty, whatever name it embedded inside its own rendered
+ * `{messageTemplate}` (it wraps an interpolated `{name}` there in its own
+ * `data-token="name"` markup for a letter-reveal animation), which testing
+ * has shown to arrive even when the standalone token didn't.
+ */
+function readName(): string {
+  const direct = readToken("name");
+  if (direct) {
+    return direct;
   }
-  return text;
+  const nested = document.querySelector<HTMLElement>(
+    '#alert-message [data-token="name"]',
+  );
+  return cleanText(nested?.textContent);
 }
 
 function readAvatar(): string | undefined {
-  return readToken("profile_image") || readToken("img") || undefined;
+  return readToken("profile_image") || readRichText("alert-image") || undefined;
 }
 
 function parseAmount(raw: string): number {
@@ -69,14 +100,15 @@ function buildEvent(
   boxType: StreamlabsAlertBoxType,
   tier: AlertTier,
 ): AlertStageEvent {
-  const name = readToken("name") || "someone";
+  const name = readName() || "someone";
   const avatar = readAvatar();
-  const message = readToken("userMessage") || readToken("message") || undefined;
+  const message =
+    readRichText("alert-user-message") || readToken("message") || undefined;
   // Streamlabs only fills this in when the streamer has set a custom
   // "Message Template" for this alert type in their own dashboard (unset
   // otherwise); when set, it's meant to replace the default one-liner
   // below it, that's the whole point of the streamer configuring it.
-  const messageTemplate = readToken("messageTemplate") || undefined;
+  const messageTemplate = readRichText("alert-message") || undefined;
 
   if (boxType === "follow") {
     return {
@@ -176,6 +208,53 @@ function buildEvent(
   };
 }
 
+// Update after deploying worker/ (see worker/README.md's deploy step),
+// same YOUR_SUBDOMAIN placeholder as src/zw-alerts.ts/src/status.ts.
+const AVATAR_LOOKUP_URL =
+  "https://zw-twitch-relay.YOUR_SUBDOMAIN.workers.dev/twitch/avatar";
+const AVATAR_FETCH_TIMEOUT_MS = 1200;
+
+/**
+ * The relay Worker's `/twitch/avatar` response shape.
+ */
+interface AvatarLookupResponse {
+  /**
+   * The resolved avatar URL, or null if the login wasn't found or has no image.
+   */
+  avatarUrl: string | null;
+}
+
+/**
+ * Best-effort live lookup for a real Twitch avatar via the relay Worker
+ * (worker/src/twitch.ts's `getUserAvatar`), since Streamlabs' Alert Box
+ * gives no reliable avatar token itself. Uses the resolved display name as
+ * the Twitch login, which only matches for ASCII usernames where the two
+ * are identical, not guaranteed for display names with different
+ * capitalization or a non-Latin script. A short timeout keeps a slow or
+ * failed lookup from holding up the alert; either way this fails back to
+ * `undefined`, the same as an unresolved token, showing the placeholder
+ * glyph instead.
+ */
+async function fetchTwitchAvatar(login: string): Promise<string | undefined> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AVATAR_FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(
+      `${AVATAR_LOOKUP_URL}?login=${encodeURIComponent(login)}`,
+      { signal: controller.signal },
+    );
+    if (!res.ok) {
+      return undefined;
+    }
+    const data = (await res.json()) as AvatarLookupResponse;
+    return data.avatarUrl ?? undefined;
+  } catch {
+    return undefined;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 const MAX_WAIT_MS = 3000;
 const POLL_INTERVAL_MS = 100;
 
@@ -189,7 +268,7 @@ const POLL_INTERVAL_MS = 100;
  * can append a query string to) so a failure like this is diagnosable from
  * whatever console the Streamlabs Interact window exposes.
  */
-function render(startedAt = Date.now()): void {
+async function render(startedAt = Date.now()): Promise<void> {
   const tokens = document.getElementById("zw-tokens");
   const boxType = tokens?.dataset.alertType as
     StreamlabsAlertBoxType | undefined;
@@ -200,16 +279,13 @@ function render(startedAt = Date.now()): void {
     );
     return;
   }
-  const nameEl = document.querySelector<HTMLElement>(
-    '#zw-tokens > [data-token="name"]',
-  );
-  const name = readToken("name");
+  const name = readName();
   console.log("[zw]", {
-    zwTokensCount: document.querySelectorAll('[id="zw-tokens"]').length,
     tokensOuterHTML: tokens.outerHTML,
-    nameElFound: !!nameEl,
-    nameElRawText: nameEl?.textContent,
-    readTokenName: name,
+    alertMessageOuterHTML: document.getElementById("alert-message")?.outerHTML,
+    alertUserMessageOuterHTML:
+      document.getElementById("alert-user-message")?.outerHTML,
+    resolvedName: name,
   });
   if (!name && Date.now() - startedAt < MAX_WAIT_MS) {
     setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
@@ -217,8 +293,12 @@ function render(startedAt = Date.now()): void {
   }
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
   const variant = tokens.dataset.variant || undefined;
+  const event = buildEvent(boxType, tier);
+  if (!event.avatar && name) {
+    event.avatar = await fetchTwitchAvatar(name);
+  }
   const stage = new AlertStage(root, { top: TOP_OFFSET, onDone: () => {} });
-  stage.show({ ...buildEvent(boxType, tier), variant }, DURATION);
+  stage.show({ ...event, variant }, DURATION);
 }
 
-render();
+void render();

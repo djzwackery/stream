@@ -129,6 +129,55 @@ export async function verifyWebhookSignature(
 }
 
 /**
+ * The subset of a Helix `/users` response this repo reads.
+ */
+interface TwitchUserResponse {
+  /**
+   * One entry per requested login; empty if the login doesn't exist.
+   */
+  data: { profile_image_url?: string }[];
+}
+
+const AVATAR_CACHE_TTL_SECONDS = 60 * 60 * 24;
+
+/**
+ * Looks up a Twitch user's current profile image by login name, so the
+ * Streamlabs Alert Box driver (which gets no reliable avatar token from
+ * Streamlabs itself) can show a real photo. Caches the result in KV
+ * (including a negative "not found" result, as an empty string) since the
+ * same regulars redeem/follow repeatedly and avatars rarely change: a
+ * cache hit costs one KV read instead of a Helix round trip.
+ */
+export async function getUserAvatar(
+  kv: KVNamespace,
+  clientId: string,
+  accessToken: string,
+  login: string,
+): Promise<string | null> {
+  const cacheKey = `avatar:${login.toLowerCase()}`;
+  const cached = await kv.get(cacheKey);
+  if (cached !== null) {
+    return cached || null;
+  }
+  const res = await fetch(
+    `https://api.twitch.tv/helix/users?login=${encodeURIComponent(login)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Client-Id": clientId,
+      },
+    },
+  );
+  const avatarUrl = res.ok
+    ? ((await res.json()) as TwitchUserResponse).data[0]?.profile_image_url
+    : undefined;
+  await kv.put(cacheKey, avatarUrl ?? "", {
+    expirationTtl: AVATAR_CACHE_TTL_SECONDS,
+  });
+  return avatarUrl ?? null;
+}
+
+/**
  * The fields this repo reads from a `channel.channel_points_custom_reward_redemption.add`
  * EventSub notification's `event` object.
  */

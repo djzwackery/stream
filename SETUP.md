@@ -91,10 +91,11 @@ from the amount or rotate variants on its own here. Do this once per combination
 That's it, permanently, once all your widgets are pasted. Streamlabs re-renders this HTML fresh for
 every alert and handles queueing and duration itself, so there's no connection to keep alive, no
 token to expire, nothing to reconnect after restarting OBS or Streamlabs. Streamlabs' Alert Box
-doesn't give custom code a real per-viewer avatar, only a static image the streamer picked in
-Streamlabs' own Image Gallery (if even that), so alerts render the placeholder glyph instead of a
-photo, that's a Streamlabs platform limit, not something this repo's code can work around without
-its own live Twitch API call.
+doesn't give custom code a real per-viewer avatar itself, so avatars are looked up live from Twitch
+through the relay Worker (see [worker/README.md](worker/README.md)) by matching the viewer's
+display name to their Twitch login; this works for most viewers but isn't guaranteed for a display
+name that doesn't match their login exactly (different capitalization, a non-Latin script), in
+which case the alert falls back to the placeholder glyph, same as if the lookup fails or times out.
 
 ## 3. Twitch (channel point redemptions)
 
@@ -172,5 +173,7 @@ going live that doesn't require triggering a real Twitch redemption to confirm t
   connected sources, the OBS source isn't reaching the Worker (check the URL and that **Shutdown
   source when not visible** is off); if the token card is red, see
   [worker/README.md](worker/README.md).
-- **Real alerts have no profile picture.** Expected, Streamlabs' Alert Box doesn't reliably supply
-  one for every alert type.
+- **Some real alerts have no profile picture.** Expected if the viewer's display name doesn't
+  exactly match their Twitch login, or if the avatar lookup was slow or failed; falls back to the
+  placeholder glyph. Real bug if it's _always_ missing, check the Worker is deployed and
+  `AVATAR_LOOKUP_URL` in the pasted JS box points at it (see [worker/README.md](worker/README.md)).

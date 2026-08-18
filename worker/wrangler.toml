@@ -12,6 +12,17 @@ id = "REPLACE_WITH_KV_NAMESPACE_ID"
 name = "HUB"
 class_name = "Hub"
 
+# Caps abuse of /twitch/avatar (the one endpoint with no origin check, see
+# worker/README.md's security model) at 20 requests/minute per IP. Free,
+# built into the platform, no KV/external calls needed to enforce it.
+[[ratelimits]]
+name = "AVATAR_RATE_LIMITER"
+namespace_id = "1"
+
+  [ratelimits.simple]
+  limit = 20
+  period = 60
+
 # Free tier only supports the SQLite storage backend for Durable Objects.
 [[migrations]]
 tag = "v1"

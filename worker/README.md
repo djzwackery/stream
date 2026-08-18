@@ -1,8 +1,9 @@
 # Twitch relay Worker
 
-A small Cloudflare Worker that relays Twitch Channel Point redemptions to `redemptions.html`, so a
-streamer using this repo never has to hold a Twitch token themselves or reconnect anything before
-going live. See the root [README.md](../README.md#wiring-real-events) and
+A small Cloudflare Worker that relays Twitch Channel Point redemptions to `redemptions.html` and
+looks up real Twitch avatars for the Streamlabs Alert Box driver, so a streamer using this repo
+never has to hold a Twitch token themselves or reconnect anything before going live. See the root
+[README.md](../README.md#wiring-real-events) and
 [SETUP.md](../SETUP.md#3-twitch-channel-point-redemptions) for how this fits into the rest of the
 repo; this file is the deploy-it-once checklist and the security write-up, for whoever maintains
 the repo, not something a streamer using it needs to read.
@@ -10,6 +11,7 @@ the repo, not something a streamer using it needs to read.
 ```
 Twitch  --(EventSub webhook, HMAC-signed POST)-->  Worker  --(broadcast)-->  Hub (Durable Object)  --(WebSocket)-->  redemptions.html
 Twitch  --(refresh_token grant, via Cron every 3h)-->  Worker  (keeps the access token alive forever, never touches the browser)
+Twitch  <--(GET /helix/users, cached in KV)--  Worker  <--(GET /twitch/avatar?login=X)--  streamlabs-alertbox.ts (in Streamlabs' widget)
 ```
 
 This is a separate deployable project from the rest of the repo: its own `package.json`,
@@ -77,11 +79,12 @@ Only needs doing once per deployment, not per stream.
    ```
 
    Note the `*.workers.dev` URL it prints (or find it later on the Cloudflare dashboard). Update the
-   fallback URL in two places at the repo root, [`src/zw-alerts.ts`](../src/zw-alerts.ts)'s
-   `REDEMPTION_HUB_URL` and [`src/status.ts`](../src/status.ts)'s `WORKER_URL`, replacing
-   `YOUR_SUBDOMAIN` with your actual one, then `npm run build` and push, so `redemptions.html` and
-   `status.html` connect to the right place without anyone needing to add a `?worker=` query string
-   by hand.
+   fallback URL in three places at the repo root, [`src/zw-alerts.ts`](../src/zw-alerts.ts)'s
+   `REDEMPTION_HUB_URL`, [`src/status.ts`](../src/status.ts)'s `WORKER_URL`, and
+   [`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)'s `AVATAR_LOOKUP_URL`, replacing
+   `YOUR_SUBDOMAIN` with your actual one, then `npm run build` and push, so `redemptions.html`,
+   `status.html`, and the Streamlabs Alert Box code (avatar lookups) all connect to the right place
+   without anyone needing to add a `?worker=` query string by hand.
 
    For automatic redeploys on every future `worker/**` push, add
    `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` as repo secrets (**Settings → Secrets and
@@ -174,3 +177,19 @@ The webhook endpoint (`POST /twitch/webhook`) is authenticated properly, not jus
 every delivery's HMAC-SHA256 signature is verified against `TWITCH_WEBHOOK_SECRET` before its
 payload is trusted (`verifyWebhookSignature` in `src/twitch.ts`), using a constant-time comparison
 so response timing can't leak the expected signature.
+
+`GET /twitch/avatar` has no origin check at all, deliberately: it's called from the Streamlabs
+Alert Box widget's own origin (Streamlabs-controlled, not `djzwackery.com`), so `Origin`/`Referer`
+checking against our own domain would just break the feature. What it returns, a public Twitch
+avatar URL for a given login, is exactly what Twitch's own API already hands anyone who asks, so
+there's no real access control being given up by leaving it open. What it does need protecting
+from is volume, not identity, since it's a free proxy to an external API for anyone who finds it:
+`AVATAR_RATE_LIMITER` (`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on
+every plan) caps it at 20 requests/minute per IP, on top of input validation rejecting anything
+that doesn't look like a real Twitch username.
+
+Every endpoint reachable from a browser sends `Access-Control-Allow-Origin`, not just the origin
+checks above: those decide _whether_ to answer a cross-origin request, this header is the separate
+thing that lets the calling browser actually read the answer once given. `/status` echoes back the
+caller's own (already-validated) origin; `/twitch/avatar`, open to any origin already, sends `*`.
+Skipping this on either would just make them fail from any real cross-origin browser call.
