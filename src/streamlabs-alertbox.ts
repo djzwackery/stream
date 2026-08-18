@@ -286,7 +286,16 @@ async function render(startedAt = Date.now()): Promise<void> {
   // second token (party size, months, amount...) could render before that
   // one had substituted, silently falling back to its own default.
   const numericToken = NUMERIC_TOKEN[boxType];
-  const numericReady = !numericToken || readToken(numericToken) !== "";
+  const numericValue = numericToken ? readToken(numericToken) : "";
+  const numericReady = !numericToken || numericValue !== "";
+  // TEMPORARY: remove once the retry condition is confirmed working.
+  console.log("[zw] poll", {
+    elapsed: Date.now() - startedAt,
+    name,
+    numericToken,
+    numericValue,
+    numericReady,
+  });
   if ((!name || !numericReady) && Date.now() - startedAt < MAX_WAIT_MS) {
     setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
     return;
