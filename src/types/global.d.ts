@@ -103,6 +103,10 @@ interface RawAlertPayload {
    */
   party?: number;
   /**
+   * Profile image URLs for the raiding party, shown as a stack of avatars.
+   */
+  party_avatars?: string[];
+  /**
    * 0-1 fraction for the bits meter fill, overrides the value-derived one.
    */
   fill?: number;

@@ -145,6 +145,7 @@ function build(raw: RawAlertPayload): AlertStageEvent {
     e.fill = raw.fill ?? Math.min(1, (raw.value || 0) / CFG.bitsHuge);
   } else if (type === "raid") {
     e.party = raw.value || raw.party || 1;
+    e.party_avatars = raw.party_avatars;
     e.detail = `${e.party} ${e.party === 1 ? "mate in tow" : "mates in tow"}`;
     e.amount = String(e.party);
     e.headline = "Incoming raid";

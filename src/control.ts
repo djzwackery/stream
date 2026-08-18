@@ -69,6 +69,10 @@
       o.reward = $<HTMLSelectElement>("reward").value;
       o.message = undefined;
     }
+    if (type === "raid") {
+      // Squad (raid's layout) stacks up to 6 tiles off party_avatars, not avatar
+      o.party_avatars = Array.from({ length: 6 }, randomAvatar);
+    }
     return o;
   }
 
