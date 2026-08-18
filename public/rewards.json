@@ -12,12 +12,14 @@
     "cost": 1000,
     "tier": "small",
     "variant": "sidecar",
+    "headline": "Hydrate",
     "tone": "--acid"
   },
   "Weights": {
     "media": "media/weights.gif",
     "cost": 3000,
     "tier": "big",
+    "headline": "Weights",
     "variant": "frame",
     "tone": "--sun"
   }

@@ -1,8 +1,8 @@
 /**
- * Tiny DOM-building helper. There's no `React.createElement` here: these
- * components don't have deep reactive state or a tree of children that
- * needs reconciling, just "build this DOM, throw it away and rebuild it (or
- * a piece of it) when the input changes," which plain DOM APIs handle fine.
+ * Tiny DOM-building helper. These components don't have deep reactive state
+ * or a tree of children that needs reconciling, just "build this DOM, throw
+ * it away and rebuild it (or a piece of it) when the input changes," which
+ * plain DOM APIs handle fine.
  */
 
 /**

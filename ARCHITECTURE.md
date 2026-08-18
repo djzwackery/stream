@@ -120,8 +120,8 @@ split internally: `update(track, visible)` does a full swap-animated rebuild whe
 No framework: everything renders through a small `el(tag, options, ...children)` helper
 ([`dom.ts`](src/components/dom.ts)) that builds real DOM nodes directly. These components are
 mostly declarative with only a couple of transient, imperative pieces (the alert queue's timing,
-the now-playing swap animation), so React's reconciliation wasn't buying anything, just an extra
-CDN dependency and a cross-origin loading complication for `now-playing-theme.html`.
+the now-playing swap animation), all handled by rebuilding the affected DOM directly instead of
+diffing it.
 
 `AlertStage` ([`AlertStage.ts`](src/components/AlertStage.ts)) resolves an `AlertStageEvent` down
 to a single layout function and a size multiplier, then builds and appends it:

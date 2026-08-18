@@ -106,9 +106,9 @@ comments; they'll just be overwritten by the next copy).
 `src/components/` (`AlertStage`, `NowPlayingCard`, and everything they render) is not copied from
 anywhere, it's owned outright in this repo. It used to be a pre-compiled `_ds_bundle.js` bundle
 copied from the design system repo, but that bundle never actually shipped redeem rendering even
-though this repo's `rewards.json` and `redemptions.html` were built assuming it had, and it was
-React-based when these components have no real use for a reconciler. Treat `src/components/` as
-regular source: edit it directly, no re-copy step, no patch markers to preserve.
+though this repo's `rewards.json` and `redemptions.html` were built assuming it had. Treat
+`src/components/` as regular source: edit it directly, no re-copy step, no patch markers to
+preserve.
 
 ## Indexing
 
