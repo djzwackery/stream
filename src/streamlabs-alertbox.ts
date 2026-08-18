@@ -216,7 +216,7 @@ const AVATAR_FETCH_TIMEOUT_MS = 1200;
 // itself, including this literal placeholder, is served publicly from
 // djzwackery.com, so the real token can never live here in source, only
 // in the copy that actually gets pasted into your Streamlabs dashboard.
-const AVATAR_API_TOKEN = "PASTE_YOUR_AVATAR_API_TOKEN_HERE";
+const API_TOKEN = "PASTE_YOUR_API_TOKEN_HERE";
 
 /**
  * The relay Worker's `/twitch/avatar` response shape.
@@ -247,7 +247,7 @@ async function fetchTwitchAvatar(login: string): Promise<string | undefined> {
       `${AVATAR_LOOKUP_URL}?login=${encodeURIComponent(login)}`,
       {
         signal: controller.signal,
-        headers: { Authorization: `Bearer ${AVATAR_API_TOKEN}` },
+        headers: { Authorization: `Bearer ${API_TOKEN}` },
       },
     );
     if (!res.ok) {

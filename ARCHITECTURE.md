@@ -12,15 +12,13 @@ public/redemptions.html       -> js/redemptions.js + js/zw-alerts.js (module)
 public/now-playing.html       -> js/zw-nowplaying.js (module)
 public/now-playing-theme.html -> same driver, absolute script URL, see below
 public/control.html           -> js/control.js (plain DOM, no components)
-public/status.html            -> js/status.js (plain DOM, no components)
 public/index.html             -> static, no driver: local dev hub linking to the pages above
 worker/src/index.ts           -> separate Cloudflare Worker project, see below
 ```
 
 `index.html` isn't a browser source at all. It's a nav page for `npm start` (and for anyone who opens
 the GitHub Pages root) so the transparent, otherwise-blank-looking pages are reachable without
-memorising their filenames or test query strings. `status.html` isn't a browser source either: it's
-a plain webpage meant for a second monitor or a regular browser tab, not something added to OBS.
+memorising their filenames or test query strings.
 
 `now-playing-theme.html` isn't a second driver either, it loads the exact same `zw-nowplaying.js`
 as `now-playing.html`. The only difference is its script URL is absolute (pointing at this repo's
@@ -90,9 +88,8 @@ Source lives in [`src/`](src/) as TypeScript; `npm run build` runs `tsc`, which 
 "Bundler"` means real `import`/`export` statements survive into the compiled output, so
 `src/components/*.ts` compiles to genuine ES modules that `zw-alerts.ts`/`zw-nowplaying.ts`/
 `streamlabs-alertbox.ts` import directly (`import { AlertStage } from "./components/AlertStage.js"`,
-resolved by the browser at `<script type="module">` load time, not bundled away). `control.ts`,
-`redemptions.ts` and `status.ts` have no imports and stay self-contained IIFEs, loaded as plain
-classic `<script>`s.
+resolved by the browser at `<script type="module">` load time, not bundled away). `control.ts` and
+`redemptions.ts` have no imports and stay self-contained IIFEs, loaded as plain classic `<script>`s.
 
 `worker/` is not part of this build: it's a separate npm project with its own `tsconfig.json` and
 `wrangler deploy`/`wrangler dev` toolchain, since it runs on Cloudflare's platform, not compiled to

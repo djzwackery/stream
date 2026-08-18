@@ -66,16 +66,18 @@ Only needs doing once per deployment, not per stream.
    npx wrangler secret put TWITCH_CLIENT_SECRET
    npx wrangler secret put TWITCH_REFRESH_TOKEN
    npx wrangler secret put TWITCH_WEBHOOK_SECRET   # any long random string you generate yourself, e.g. `openssl rand -hex 32`
-   npx wrangler secret put AVATAR_API_TOKEN        # another one, separate from the above
+   npx wrangler secret put API_TOKEN               # another one, separate from the above
    ```
 
-   `TWITCH_WEBHOOK_SECRET` and `AVATAR_API_TOKEN` aren't from Twitch, they're secrets you invent
-   yourself (`openssl rand -hex 32` again is fine). `TWITCH_WEBHOOK_SECRET` is reused in step 7
-   below, Twitch signs every webhook delivery with it so the Worker can tell a real notification
-   from a forged one. `AVATAR_API_TOKEN` gates `GET /twitch/avatar` (see the Security model section
-   below): give it to whoever's pasting the Streamlabs Alert Box code, they paste it into the JS
-   box in place of the `PASTE_YOUR_AVATAR_API_TOKEN_HERE` placeholder
-   ([`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)) before it goes into Streamlabs.
+   `TWITCH_WEBHOOK_SECRET` and `API_TOKEN` aren't from Twitch, they're secrets you invent yourself
+   (`openssl rand -hex 32` again is fine). `TWITCH_WEBHOOK_SECRET` is reused in step 7 below, Twitch
+   signs every webhook delivery with it so the Worker can tell a real notification from a forged
+   one. `API_TOKEN` gates `GET /twitch/avatar` and `POST /twitch/refresh` (see the Security model
+   section below): give it to whoever's pasting the Streamlabs Alert Box code, they paste it into
+   the JS box in place of the `PASTE_YOUR_API_TOKEN_HERE` placeholder
+   ([`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)) before it goes into Streamlabs
+   (`control.html`'s own **API Token** field does this substitution for you and remembers it on
+   that browser), and keep it yourself for curling `/twitch/refresh` directly if you ever need to.
 
 6. **Deploy:**
 
@@ -92,12 +94,11 @@ Only needs doing once per deployment, not per stream.
    ```
 
    Note the `*.workers.dev` URL it prints (or find it later on the Cloudflare dashboard). Update the
-   fallback URL in three places at the repo root, [`src/zw-alerts.ts`](../src/zw-alerts.ts)'s
-   `REDEMPTION_HUB_URL`, [`src/status.ts`](../src/status.ts)'s `WORKER_URL`, and
-   [`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)'s `AVATAR_LOOKUP_URL`, replacing
-   `YOUR_SUBDOMAIN` with your actual one, then `npm run build` and push, so `redemptions.html`,
-   `status.html`, and the Streamlabs Alert Box code (avatar lookups) all connect to the right place
-   without anyone needing to add a `?worker=` query string by hand.
+   fallback URL in two places at the repo root, [`src/zw-alerts.ts`](../src/zw-alerts.ts)'s
+   `REDEMPTION_HUB_URL` and [`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)'s
+   `AVATAR_LOOKUP_URL`, replacing `YOUR_SUBDOMAIN` with your actual one, then `npm run build` and
+   push, so `redemptions.html` and the Streamlabs Alert Box code (avatar lookups) both connect to
+   the right place without anyone needing to add a `?worker=` query string by hand.
 
    For automatic redeploys on every future `worker/**` push, add
    `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` as repo secrets (**Settings → Secrets and
@@ -161,7 +162,7 @@ TWITCH_CLIENT_ID=...
 TWITCH_CLIENT_SECRET=...
 TWITCH_REFRESH_TOKEN=...
 TWITCH_WEBHOOK_SECRET=...
-AVATAR_API_TOKEN=...
+API_TOKEN=...
 ```
 
 Scheduled Workers don't fire on a timer during local dev; trigger the Cron handler manually with
@@ -176,16 +177,17 @@ this Worker, used only in its own outbound calls to Twitch (`refreshAccessToken`
 the public static site are two entirely separate deployments that only ever exchange a read-only
 event stream.
 
-`GET /ws` and `GET /status` check `Origin`/`Referer` against `djzwackery.com` (and `localhost`, for
-local dev). This is **not real access control**, it's a soft speed bump: GitHub Pages serves plain,
-readable JavaScript, so there's no way to embed a real shared secret in the browser-side code that a
+`GET /ws` checks `Origin`/`Referer` against `djzwackery.com` (and `localhost`, for local dev). This
+is **not real access control**, it's a soft speed bump: GitHub Pages serves plain, readable
+JavaScript, so there's no way to embed a real shared secret in the browser-side code that a
 determined visitor couldn't just read back out and reuse, and headers like `Origin` can be spoofed
 by anyone deliberately crafting requests outside a browser. What the check actually stops is casual
 drive-by discovery of the endpoint from unrelated sites, nothing more. What it protects if bypassed:
 read-only visibility into a channel's own Twitch redemptions, the same events already broadcast to
 every viewer a few seconds later on stream. Bypassing it doesn't expose a token, doesn't let anyone
-take an action, and doesn't touch the Twitch account, so the gap is accepted rather than solved with
-more infrastructure that would reintroduce the setup friction this design exists to remove.
+take an action, and doesn't touch the Twitch account, so the gap is accepted rather than closed with
+a bearer token here too, which would mean putting a secret in every OBS Redemptions source's own
+URL, reintroducing the setup friction this design exists to remove.
 
 The webhook endpoint (`POST /twitch/webhook`) is authenticated properly, not just origin-checked:
 every delivery's HMAC-SHA256 signature is verified against `TWITCH_WEBHOOK_SECRET` before its
@@ -194,25 +196,29 @@ so response timing can't leak the expected signature.
 
 `GET /twitch/avatar` has no origin check, deliberately: it's called from the Streamlabs Alert Box
 widget's own origin (Streamlabs-controlled, not `djzwackery.com`), so `Origin`/`Referer` checking
-against our own domain would just break the feature. Unlike `/ws` and `/status` though, this one
-isn't left fully open either: it's gated on `AVATAR_API_TOKEN`, a bearer token checked with a
-constant-time comparison (`timingSafeEqual` in `src/twitch.ts`), shared out-of-band with whoever
-pastes the Streamlabs code, not committed anywhere and never present in the public bundle (see
-`AVATAR_API_TOKEN`'s doc in `src/streamlabs-alertbox.ts` for how the placeholder that _does_ ship
-publicly gets swapped for the real thing only in the copy that reaches Streamlabs). Be honest about
-what this does and doesn't buy: it's real access control against a stranger who stumbles on the
-endpoint with no token at all, but it isn't a secret in the cryptographic sense once it's pasted
-into a specific streamer's own Streamlabs dashboard, since that streamer (or anyone with access to
-their OBS/Streamlabs setup) can view-source the pasted JS same as any client-side code. That's an
+against our own domain would just break the feature. Unlike `/ws` though, this one isn't left fully
+open either: it's gated on `API_TOKEN`, a bearer token checked with a constant-time comparison
+(`timingSafeEqual` in `src/twitch.ts`), shared out-of-band with whoever pastes the Streamlabs code,
+not committed anywhere and never present in the public bundle (see `API_TOKEN`'s doc in
+`src/streamlabs-alertbox.ts` for how the placeholder that _does_ ship publicly gets swapped for the
+real thing only in the copy that reaches Streamlabs). `POST /twitch/refresh` (the manual trigger for
+the same token refresh the Cron runs every 3 hours, meant to be curled from a terminal) is gated
+the same way. Be honest about what the token
+does and doesn't buy: it's real access control against a stranger who stumbles on either endpoint
+with no token at all, but it isn't a secret in the cryptographic sense once it's pasted into a
+specific streamer's own Streamlabs dashboard, since that streamer (or anyone with access to their
+OBS/Streamlabs setup) can view-source the pasted JS same as any client-side code. That's an
 acceptable tradeoff here: the token is shared deliberately with a trusted party for the widget to
 work at all, not something being protected from them. What it does meaningfully stop is casual
 discovery by anyone who isn't that streamer. On top of the token, `AVATAR_RATE_LIMITER`
 (`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on every plan) caps
-requests at 20/minute per IP, so even a leaked token can't turn this into an unmetered proxy to
-Twitch's API, and input validation rejects anything that doesn't look like a real Twitch username.
+`/twitch/avatar` requests at 20/minute per IP, so even a leaked token can't turn this into an
+unmetered proxy to Twitch's API, and input validation rejects anything that doesn't look like a real
+Twitch username.
 
-Every endpoint reachable from a browser sends `Access-Control-Allow-Origin`, not just the origin
-checks above: those decide _whether_ to answer a cross-origin request, this header is the separate
-thing that lets the calling browser actually read the answer once given. `/status` echoes back the
-caller's own (already-validated) origin; `/twitch/avatar`, open to any origin already, sends `*`.
-Skipping this on either would just make them fail from any real cross-origin browser call.
+Every endpoint reachable from a browser and gated on `API_TOKEN` sends `Access-Control-Allow-Origin:
+*`, since it's the token, not the origin, deciding who's allowed in; skipping this would make those
+calls fail from any real cross-origin browser call regardless of whether the token was right. Their
+`OPTIONS` preflight (triggered by the `Authorization` header itself, not a "simple" header a browser
+sends without asking first) is answered the same way, before the token check ever runs, since a
+preflight never carries the real header it's asking permission to send.

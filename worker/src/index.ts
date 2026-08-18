@@ -1,6 +1,6 @@
 /**
  * Entry point: routes Twitch's EventSub webhook, the browser-facing
- * WebSocket hub, and the status endpoint, plus the Cron-triggered token
+ * WebSocket hub, and the avatar lookup, plus the Cron-triggered token
  * refresh. See ARCHITECTURE.md and worker/README.md for the full picture.
  */
 import { Hub } from "./hub.js";
@@ -48,10 +48,11 @@ export interface Env {
    */
   AVATAR_RATE_LIMITER: RateLimit;
   /**
-   * Bearer token gating `/twitch/avatar`, shared out-of-band with whoever pastes the
-   * Streamlabs Alert Box code (see worker/README.md), not something the public ever sees.
+   * Bearer token required by `/twitch/avatar` and `/twitch/refresh`, shared out-of-band
+   * with whoever pastes the Streamlabs Alert Box code (see worker/README.md and
+   * control.html's own API Token field), not something the public ever sees.
    */
-  AVATAR_API_TOKEN: string;
+  API_TOKEN: string;
 }
 
 /**
@@ -105,70 +106,82 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
   return new Response("", { status: 200 });
 }
 
-async function handleStatus(request: Request, env: Env): Promise<Response> {
-  if (!originAllowed(request)) {
-    return new Response("Forbidden", { status: 403 });
-  }
-  const [tokens, hubStatus] = await Promise.all([
-    loadTokens(env.TOKENS),
-    hub(env).getStatus(),
-  ]);
-  return Response.json(
-    {
-      twitch: { lastRefreshedAt: tokens?.refreshedAt ?? null },
-      hub: hubStatus,
-    },
-    // Without this, status.html's cross-origin fetch (djzwackery.com calling
-    // a *.workers.dev origin) gets rejected client-side before it can even
-    // read the 200: the origin check above decides *whether* to answer,
-    // this header is what lets a browser accept an answer it already
-    // decided to give. Echoes the caller's own origin back rather than a
-    // static value: it's only ever reached after passing originAllowed, so
-    // this never widens who the origin check itself accepts.
-    {
-      headers: {
-        "Access-Control-Allow-Origin": request.headers.get("Origin") ?? "",
-      },
-    },
-  );
-}
-
 const LOGIN_PATTERN = /^[a-zA-Z0-9_]{1,25}$/;
 
-// Open to any origin, matching handleAvatar's own lack of an origin check
-// (see its doc below); every response here carries this, including the
-// error paths, without it a rejected request (bad login, rate limited)
-// fails as an opaque network error client-side instead of a readable
-// status the caller can branch on.
-const AVATAR_CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
+// Open to any origin: every endpoint gated on requireApiToken below relies
+// on the token, not the origin, to decide who's allowed in, so there's
+// nothing meaningful an origin check would add here. Every response using
+// this carries it, including the error paths, without it a rejected
+// request (bad token, bad login, rate limited) fails as an opaque network
+// error client-side instead of a readable status the caller can branch on.
+const API_CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
+
+/**
+ * Shared bearer-token gate for `/twitch/avatar` and `/twitch/refresh`:
+ * everything a maintainer or a pasted Streamlabs widget calls directly, as
+ * opposed to `/twitch/webhook` (called by Twitch itself, which has no way
+ * to send our token, hence its own HMAC signature check instead) and `/ws`
+ * (called from inside an OBS browser source, where requiring a token would
+ * mean putting it in the source's URL, reversing the "nothing to configure
+ * in OBS" setup this project was built around; origin-checking stays good
+ * enough there since it only gates read-only visibility into events
+ * already broadcast to viewers a few seconds later anyway).
+ */
+function requireApiToken(request: Request, env: Env): Response | null {
+  const auth = request.headers.get("Authorization") ?? "";
+  if (!timingSafeEqual(auth, `Bearer ${env.API_TOKEN}`)) {
+    return new Response("Forbidden", {
+      status: 403,
+      headers: API_CORS_HEADERS,
+    });
+  }
+  return null;
+}
+
+/**
+ * Answers the browser's CORS preflight `OPTIONS` request for a
+ * token-gated, cross-origin endpoint. A preflight never carries the real
+ * `Authorization` header it's asking permission to send, so it must be
+ * answered here, before the real handler's own token check runs, or every
+ * call fails as a blocked preflight regardless of whether the token is
+ * right.
+ */
+function corsPreflight(methods: string): Response {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      ...API_CORS_HEADERS,
+      "Access-Control-Allow-Headers": "Authorization",
+      "Access-Control-Allow-Methods": methods,
+      "Access-Control-Max-Age": "86400",
+    },
+  });
+}
 
 /**
  * Resolves a Twitch login to their current avatar URL, for the Streamlabs
  * Alert Box driver, which gets no reliable avatar token from Streamlabs
- * itself. Not origin-gated like `/ws` and `/status`: the Alert Box widget
- * runs on a Streamlabs-controlled origin, not djzwackery.com, so
- * `Origin`/`Referer` checking against our own domain isn't meaningful
- * here. Gated instead on `AVATAR_API_TOKEN`, a bearer token shared
- * out-of-band with whoever pastes the Streamlabs code (never committed,
- * never present in the public bundle, see `AVATAR_API_TOKEN`'s doc in
- * `src/streamlabs-alertbox.ts`), plus an IP-keyed rate limit
- * (`AVATAR_RATE_LIMITER`, `wrangler.toml`) as a second layer, since even a
- * token that leaks out of one streamer's own Streamlabs setup shouldn't
- * turn this into an unmetered proxy to Twitch's API.
+ * itself. Not origin-gated like `/ws`: the Alert Box widget runs on a
+ * Streamlabs-controlled origin, not djzwackery.com, so `Origin`/`Referer`
+ * checking against our own domain isn't meaningful here. Gated instead on
+ * `API_TOKEN` (`requireApiToken`), a bearer token shared out-of-band with
+ * whoever pastes the Streamlabs code (never committed, never present in
+ * the public bundle, see `API_TOKEN`'s doc in `src/streamlabs-alertbox.ts`),
+ * plus an IP-keyed rate limit (`AVATAR_RATE_LIMITER`, `wrangler.toml`) as a
+ * second layer, since even a token that leaks out of one streamer's own
+ * Streamlabs setup shouldn't turn this into an unmetered proxy to Twitch's
+ * API.
  */
 async function handleAvatar(request: Request, env: Env): Promise<Response> {
-  const auth = request.headers.get("Authorization") ?? "";
-  if (!timingSafeEqual(auth, `Bearer ${env.AVATAR_API_TOKEN}`)) {
-    return new Response("Forbidden", {
-      status: 403,
-      headers: AVATAR_CORS_HEADERS,
-    });
+  const denied = requireApiToken(request, env);
+  if (denied) {
+    return denied;
   }
   const login = new URL(request.url).searchParams.get("login") ?? "";
   if (!LOGIN_PATTERN.test(login)) {
     return new Response("Invalid login", {
       status: 400,
-      headers: AVATAR_CORS_HEADERS,
+      headers: API_CORS_HEADERS,
     });
   }
   // No origin check to key a rate limit off, so this keys off the caller's
@@ -178,7 +191,7 @@ async function handleAvatar(request: Request, env: Env): Promise<Response> {
   if (!success) {
     return new Response("Too many requests", {
       status: 429,
-      headers: AVATAR_CORS_HEADERS,
+      headers: API_CORS_HEADERS,
     });
   }
   const tokens = await loadTokens(env.TOKENS);
@@ -194,7 +207,7 @@ async function handleAvatar(request: Request, env: Env): Promise<Response> {
     { avatarUrl },
     {
       headers: {
-        ...AVATAR_CORS_HEADERS,
+        ...API_CORS_HEADERS,
         "Cache-Control": "public, max-age=3600",
       },
     },
@@ -205,18 +218,16 @@ async function handleAvatar(request: Request, env: Env): Promise<Response> {
  * Forces the token refresh the Cron would otherwise only run every 3
  * hours: `wrangler secret put` alone doesn't populate KV, only a
  * successful refresh does, so right after the one-time setup there's
- * nothing in KV yet for `/status`/`/twitch/avatar` to read until either
- * this runs once or the Cron eventually fires on its own. Also useful
+ * nothing in KV yet for `/twitch/avatar` to read until either this runs
+ * once or the Cron eventually fires on its own. Also useful
  * later if a refresh ever gets stuck and needs retrying without waiting.
- * Gated on `TWITCH_WEBHOOK_SECRET` as a bearer token, not origin-checked:
- * this is meant to be curled from a terminal, which sends no Origin.
+ * Meant to be curled from a terminal, so gated the same as the other
+ * maintainer-facing endpoints: `requireApiToken`, not origin-checked.
  */
 async function handleRefresh(request: Request, env: Env): Promise<Response> {
-  if (
-    request.headers.get("Authorization") !==
-    `Bearer ${env.TWITCH_WEBHOOK_SECRET}`
-  ) {
-    return new Response("Forbidden", { status: 403 });
+  const denied = requireApiToken(request, env);
+  if (denied) {
+    return denied;
   }
   try {
     const tokens = await refreshAccessToken(
@@ -246,27 +257,9 @@ export default {
       }
       return hub(env).fetch(request);
     }
-    if (url.pathname === "/status") {
-      return handleStatus(request, env);
-    }
     if (url.pathname === "/twitch/avatar") {
-      // The browser sends this itself, to ask permission before the real
-      // GET, because that GET carries a custom `Authorization` header
-      // (any non-"simple" header triggers a CORS preflight). A preflight
-      // never carries the real header it's asking about, so it must be
-      // answered here, before handleAvatar's own token check, or every
-      // avatar lookup fails as a blocked preflight before the actual
-      // request is ever sent, regardless of whether the token is right.
       if (request.method === "OPTIONS") {
-        return new Response(null, {
-          status: 204,
-          headers: {
-            ...AVATAR_CORS_HEADERS,
-            "Access-Control-Allow-Headers": "Authorization",
-            "Access-Control-Allow-Methods": "GET",
-            "Access-Control-Max-Age": "86400",
-          },
-        });
+        return corsPreflight("GET");
       }
       return handleAvatar(request, env);
     }

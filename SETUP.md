@@ -14,7 +14,6 @@ https://djzwackery.com/stream/alerts.html
 https://djzwackery.com/stream/redemptions.html
 https://djzwackery.com/stream/now-playing.html
 https://djzwackery.com/stream/control.html
-https://djzwackery.com/stream/status.html
 ```
 
 Every push to `main` redeploys automatically, so these always serve the latest version.
@@ -106,14 +105,8 @@ which case the alert falls back to the placeholder glyph, same as if the lookup 
 Streamlabs doesn't relay Channel Point redemptions at all (its Alert Box has no type for them), so
 these come from a small Cloudflare Worker instead, already deployed and running, nothing to set up
 here. The **Redemptions** source added in step 1 connects to it automatically over a WebSocket and
-stays connected in the background.
-
-If you ever want to double check it's healthy, either your own or before going live, open
-[`status.html`](https://djzwackery.com/stream/status.html) on a second monitor or in any regular
-browser tab, no OBS needed: it shows the Twitch token's last refresh time and how many OBS sources
-are currently connected. Green means healthy; if a card ever turns red, see
-[worker/README.md](worker/README.md) or ping whoever deployed the Worker, this isn't something
-fixable from inside OBS.
+stays connected in the background. If a redemption ever doesn't show up, see the Troubleshooting
+section below; that's not something fixable from inside OBS, ping whoever deployed the Worker.
 
 ## 4. Now Playing app (optional)
 
@@ -148,11 +141,6 @@ Or skip the control panel entirely: open the Alerts source's own **Interact** wi
 **1**-**6** (follow / sub / tip / bits / raid / redeem), holding **shift** for the big tier or
 **alt** for huge, that's also running in OBS's browser, so it works the same way.
 
-**Are real events actually connected?** Open [`status.html`](https://djzwackery.com/stream/status.html)
-in any regular browser tab (it's not an OBS source, and it doesn't need one). It shows the Twitch
-Worker's token health and how many OBS sources are currently connected to it, a quick check before
-going live that doesn't require triggering a real Twitch redemption to confirm the pipe works.
-
 ## 6. Customize
 
 - **Rewards:** edit `public/rewards.json` and drop a GIF in `public/media/`, see README's "Point
@@ -172,11 +160,10 @@ going live that doesn't require triggering a real Twitch redemption to confirm t
 - **A Streamlabs alert type never fires for real.** Double-check Custom HTML/CSS/JS is actually
   enabled for that alert type in Streamlabs' Alert Box widget, and that you pasted both the HTML
   and CSS boxes (not just one), see step 2.
-- **Redemptions never fire for real, only from `control.html`.** Check
-  [`status.html`](https://djzwackery.com/stream/status.html): if the Redemptions card shows 0
-  connected sources, the OBS source isn't reaching the Worker (check the URL and that **Shutdown
-  source when not visible** is off); if the token card is red, see
-  [worker/README.md](worker/README.md).
+- **Redemptions never fire for real, only from `control.html`.** Check the OBS Redemptions source's
+  URL is correct and that **Shutdown source when not visible** is off; if that all looks right, see
+  [worker/README.md](worker/README.md) for checking the Worker itself (`wrangler tail` to watch it
+  live, or `wrangler secret list` to confirm its secrets are set).
 - **Some real alerts have no profile picture.** Expected if the viewer's display name doesn't
   exactly match their Twitch login, or if the avatar lookup was slow or failed; falls back to the
   placeholder glyph. Real bug if it's _always_ missing, check the Worker is deployed and

@@ -334,8 +334,8 @@
 
   // Matches the placeholder streamlabs-alertbox.ts ships with (that file's
   // own source is the other place this exact string is defined).
-  const AVATAR_TOKEN_PLACEHOLDER = "PASTE_YOUR_AVATAR_API_TOKEN_HERE";
-  const AVATAR_TOKEN_STORAGE_KEY = "zw-avatar-api-token";
+  const API_TOKEN_PLACEHOLDER = "PASTE_YOUR_API_TOKEN_HERE";
+  const API_TOKEN_STORAGE_KEY = "zw-api-token";
 
   // The JS box doesn't vary per type, streamlabs-alertbox.ts reads the type
   // off data-alert-type in the HTML box at run time, so it's fetched once.
@@ -349,20 +349,20 @@
   function renderSlJs(): void {
     const token = $<HTMLInputElement>("sl-token").value.trim();
     $<HTMLTextAreaElement>("sl-js").value = token
-      ? slJsBundle.replace(AVATAR_TOKEN_PLACEHOLDER, token)
+      ? slJsBundle.replace(API_TOKEN_PLACEHOLDER, token)
       : slJsBundle;
   }
 
-  const savedToken = localStorage.getItem(AVATAR_TOKEN_STORAGE_KEY);
+  const savedToken = localStorage.getItem(API_TOKEN_STORAGE_KEY);
   if (savedToken) {
     $<HTMLInputElement>("sl-token").value = savedToken;
   }
   $<HTMLInputElement>("sl-token").addEventListener("input", () => {
     const value = $<HTMLInputElement>("sl-token").value.trim();
     if (value) {
-      localStorage.setItem(AVATAR_TOKEN_STORAGE_KEY, value);
+      localStorage.setItem(API_TOKEN_STORAGE_KEY, value);
     } else {
-      localStorage.removeItem(AVATAR_TOKEN_STORAGE_KEY);
+      localStorage.removeItem(API_TOKEN_STORAGE_KEY);
     }
     renderSlJs();
   });

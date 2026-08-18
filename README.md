@@ -13,7 +13,6 @@ public/                 everything your broadcast software, GitHub Pages and the
   now-playing.html          the now-playing card, transparent background
   now-playing-theme.html    the same card as a Now Playing app custom theme, see below
   control.html              rehearsal panel: fires test alerts, generates the Streamlabs Alert Box code below
-  status.html               live health of the Twitch relay Worker, see below
   js/                       compiled output of src/*.ts (incl. js/components/), gitignored, see ARCHITECTURE.md
   rewards.json              reward title to GIF, cost, tier, layout, accent
   media/                    your reward GIFs (see media/README.md)
@@ -126,8 +125,7 @@ Worker, which fans it out over a WebSocket to every connected `redemptions.html`
 the Twitch access/refresh token itself and keeps it alive indefinitely, so there's no token to
 enter into OBS and nothing to reconnect before a stream; see
 [`worker/README.md`](worker/README.md) for deploying it (a one-time step for whoever maintains the
-repo, not something a streamer using it needs to touch) and
-[`status.html`](status.html) for checking it's healthy.
+repo, not something a streamer using it needs to touch).
 
 **Your own EventSub relay.** Any script on the page can call `window.ZW.fire({...})`, or another
 window can `postMessage({zwAlert: {...}})`:
