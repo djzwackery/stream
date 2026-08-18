@@ -287,21 +287,12 @@ async function render(startedAt = Date.now()): Promise<void> {
     );
     return;
   }
-  const name = readName();
+  const name = readName(tokens);
   // Only {name} was ever waited on, so a type whose display depends on a
   // second token (party size, months, amount...) could render before that
   // one had substituted, silently falling back to its own default.
   const numericToken = NUMERIC_TOKEN[boxType];
-  const numericValue = numericToken ? readToken(numericToken) : "";
-  const numericReady = !numericToken || numericValue !== "";
-  // TEMPORARY: remove once the retry condition is confirmed working.
-  console.log("[zw] poll", {
-    elapsed: Date.now() - startedAt,
-    name,
-    numericToken,
-    numericValue,
-    numericReady,
-  });
+  const numericReady = !numericToken || readToken(tokens, numericToken) !== "";
   if ((!name || !numericReady) && Date.now() - startedAt < MAX_WAIT_MS) {
     setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
     return;
@@ -314,7 +305,7 @@ async function render(startedAt = Date.now()): Promise<void> {
   }
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
   const variant = tokens.dataset.variant || undefined;
-  const event = buildEvent(boxType, tier);
+  const event = buildEvent(tokens, boxType, tier);
   if (!event.avatar && name) {
     event.avatar = await fetchTwitchAvatar(name);
   }
