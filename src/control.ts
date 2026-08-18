@@ -228,7 +228,6 @@
       spans,
       "</div>",
       '<div id="root"></div>',
-      '<script type="module" src="https://djzwackery.com/stream/js/streamlabs-alertbox.js"></script>',
     ].join("\n");
   }
 
@@ -243,6 +242,23 @@
   );
   updateStreamlabsCode();
 
+  // The JS box doesn't vary per type, streamlabs-alertbox.ts reads the type
+  // off data-alert-type in the HTML box at run time, so it's fetched once.
+  // Streamlabs' JS box runs the pasted script standalone, it can't resolve
+  // `import`s, so this is the esbuild-bundled, self-contained build, not
+  // tsc's own module output.
+  fetch("js/streamlabs-alertbox.bundle.js", { cache: "no-store" })
+    .then((r) => r.text())
+    .then((js) => {
+      $<HTMLTextAreaElement>("sl-js").value = js;
+    })
+    .catch(() =>
+      console.warn(
+        "[zw] could not load streamlabs-alertbox.bundle.js, run `npm run build` first",
+      ),
+    );
+
   $<HTMLButtonElement>("sl-html-copy").onclick = () => copyField("sl-html");
   $<HTMLButtonElement>("sl-css-copy").onclick = () => copyField("sl-css");
+  $<HTMLButtonElement>("sl-js-copy").onclick = () => copyField("sl-js");
 })();

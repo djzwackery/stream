@@ -146,6 +146,9 @@
       #sl-css {
         min-height: 48px;
       }
+      #sl-js {
+        min-height: 220px;
+      }
     </style>
   </head>
   <body>
@@ -215,9 +218,13 @@
     <h2>Streamlabs Alert Box code</h2>
     <p>
       Paste into Streamlabs: Alert Box widget → pick a type → enable Custom
-      HTML/CSS/JS → paste the HTML box below into "HTML" and the CSS box into
-      "CSS", no JS box needed. One-time per type, no token, nothing to
-      reconnect: Streamlabs runs this itself from then on.
+      HTML/CSS/JS → paste the HTML box below into "HTML", the CSS box into
+      "CSS", and the JS box into "JS" (all three, Streamlabs runs its JS box
+      as a standalone script, not a module, so it can't be a
+      <code>&lt;script&gt;</code> tag inside the HTML box). The JS box is the
+      same for every type, only HTML/CSS change with the dropdown. One-time
+      per type, no token, nothing to reconnect: Streamlabs runs this itself
+      from then on.
     </p>
     <div class="row">
       <label
@@ -239,6 +246,10 @@
     <div class="row">
       <textarea id="sl-css" readonly></textarea>
       <button type="button" id="sl-css-copy">Copy CSS</button>
+    </div>
+    <div class="row">
+      <textarea id="sl-js" readonly></textarea>
+      <button type="button" id="sl-js-copy">Copy JS</button>
     </div>
     <script src="js/control.js"></script>
   </body>
