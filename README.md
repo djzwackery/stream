@@ -2,7 +2,8 @@
 
 Browser-source overlays for OBS, Streamlabs, and similar broadcast software, written in TypeScript
 and compiled to plain `<script>`s so each page stays a drop-in file with no build step for the
-browser source itself.
+browser source itself. Setting up OBS and wiring up real events? See [SETUP.md](SETUP.md) for the
+step-by-step walkthrough; this file is the reference.
 
 ```
 public/                 everything your broadcast software, GitHub Pages and the release zip actually need
@@ -12,7 +13,9 @@ public/                 everything your broadcast software, GitHub Pages and the
   now-playing.html          the now-playing card, transparent background
   now-playing-theme.html    the same card as a Now Playing app custom theme, see below
   control.html              rehearsal panel: fires test alerts into every alerts.html on this origin
-  js/                       compiled output of src/*.ts (incl. js/components/), gitignored, see ARCHITECTURE.md
+  streamlabs-relay.html     connects to Streamlabs and forwards real events, see below
+  twitch-relay.html         connects to Twitch and forwards real redemptions, see below
+  js/                       compiled output of src/*.ts (incl. js/components/, js/vendor/), gitignored, see ARCHITECTURE.md
   rewards.json              reward title to GIF, cost, tier, layout, accent
   media/                    your reward GIFs (see media/README.md)
   styles.css tokens/        the brand tokens
@@ -101,6 +104,36 @@ paste the contents of `alerts.html` into the HTML box and point the script tag a
 maps
 `follower-latest`, `subscriber-latest`, `tip-latest`, `cheer-latest` and `raid-latest`, including
 gifted subs, months, bit counts and raid party size.
+
+**Streamlabs.** Open [`streamlabs-relay.html`](streamlabs-relay.html), paste your Socket API token
+(Streamlabs dashboard: **Settings → API Settings → API Tokens → "Your Socket API Token"**) and hit
+**Connect**. It forwards Twitch follows, subscriptions, bits, raids and donations/tips into every
+`alerts.html` on this origin, the same BroadcastChannel/localStorage channel `control.html` uses.
+The token is remembered in `localStorage` and it reconnects automatically next time the page loads,
+so add it as its own OBS/Streamlabs browser source (any size, it renders nothing) and leave it
+running alongside your alert source, the same way you'd leave `alerts.html` itself running. Two
+things it can't do:
+
+- **Twitch Channel Point redemptions.** Streamlabs' Socket API doesn't relay these at all; see
+  Twitch relay, below.
+- **Avatars.** Streamlabs' events don't carry a profile image URL, so real Streamlabs-sourced
+  alerts render the placeholder glyph, not a photo, unlike StreamElements' events.
+
+**Twitch (Channel Point redemptions).** Streamlabs and StreamElements both leave redemptions out,
+so [`twitch-relay.html`](twitch-relay.html) talks to Twitch directly:
+
+1. Register an app at [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps), any name,
+   category "Application Integration". Add the page's own URL (it shows you the exact one to use)
+   to the app's **OAuth Redirect URLs**, both your local `http://localhost:5500/twitch-relay.html`
+   and the deployed one if you use both.
+2. Open the page, paste the app's **Client ID** (not the Client Secret, this never needs it), click
+   **Connect with Twitch**, approve the `channel:read:redemptions` scope.
+
+It subscribes over Twitch's EventSub WebSocket and forwards redemptions the same way the Streamlabs
+relay forwards everything else, straight into `redemptions.html`/`alerts.html`. Same deal as the
+Streamlabs relay: add it as its own persistent OBS/Streamlabs source. The one gap: this flow's token
+expires after a few hours (Twitch doesn't issue a refresh token for it), so reconnecting just means
+opening the page and clicking **Connect with Twitch** again.
 
 **Your own EventSub relay.** Any script on the page can call `window.ZW.fire({...})`, or another
 window can `postMessage({zwAlert: {...}})`:

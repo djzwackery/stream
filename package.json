@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "serve -l 5500 -c ../serve.json public",
-    "build": "tsc",
+    "build": "tsc && node scripts/copy-vendor.mjs",
     "watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
@@ -25,6 +25,7 @@
     "globals": "17.11.0",
     "prettier": "3.9.6",
     "serve": "14.2.6",
+    "socket.io-client": "2.5.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.67.0"
   }

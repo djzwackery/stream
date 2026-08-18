@@ -2,7 +2,7 @@
 
 ## Shape of the thing
 
-Four standalone HTML pages under `public/`, each a browser source for OBS, Streamlabs, or similar
+Standalone HTML pages under `public/`, each a browser source for OBS, Streamlabs, or similar
 broadcast software. No router, no shared page shell, no framework: every page loads the
 alert/now-playing components it needs as native ES modules, plus one small driver script.
 
@@ -12,6 +12,8 @@ public/redemptions.html       -> js/redemptions.js + js/zw-alerts.js (module)
 public/now-playing.html       -> js/zw-nowplaying.js (module)
 public/now-playing-theme.html -> same driver, absolute script URL, see below
 public/control.html           -> js/control.js (plain DOM, no components)
+public/streamlabs-relay.html  -> js/streamlabs-relay.js + js/vendor/socket.io.js, see below
+public/twitch-relay.html      -> js/twitch-relay.js (plain DOM, no components)
 public/index.html             -> static, no driver: local dev hub linking to the pages above
 ```
 
@@ -32,6 +34,18 @@ README.md.
 first and rewrites the URL to `?accept=redeem` before the driver reads its query string, so the
 same driver renders a different slice of events depending on which page loaded it, instead of
 maintaining two copies of the event-queueing logic.
+
+`streamlabs-relay.html` and `twitch-relay.html` are inputs, not outputs: they render nothing, just
+connect to a third-party real-time API and turn its events into `RawAlertPayload`s broadcast over
+the same `BroadcastChannel("zw-alerts")` + `localStorage["zw-alert"]` channel `control.html` uses
+(see Event flow, below), so `zw-alerts.js` on any other open page picks them up exactly as if
+`control.html` had fired them. Add either as its own persistent OBS/Streamlabs source, same as
+`alerts.html` itself, and it keeps running (and reconnecting) independent of which alert page is
+currently visible. They exist as two separate pages, not one, because they cover two disjoint event
+sets: `streamlabs-relay.ts` gets follows/subs/bits/raids/tips from Streamlabs' Socket API, which
+doesn't relay Twitch Channel Point redemptions at all; `twitch-relay.ts` gets exactly those
+redemptions by talking to Twitch's own EventSub WebSocket directly, since nothing else in this
+repo's inputs covers them for a Streamlabs-only setup.
 
 ## Why `public/`
 
@@ -63,8 +77,16 @@ Source lives in [`src/`](src/) as TypeScript; `npm run build` runs `tsc`, which 
 "Bundler"` means real `import`/`export` statements survive into the compiled output, so
 `src/components/*.ts` compiles to genuine ES modules that `zw-alerts.ts`/`zw-nowplaying.ts` import
 directly (`import { AlertStage } from "./components/AlertStage.js"`, resolved by the browser at
-`<script type="module">` load time, not bundled away). `control.ts` and `redemptions.ts` have no
-imports and stay self-contained IIFEs, loaded as plain classic `<script>`s.
+`<script type="module">` load time, not bundled away). `control.ts`, `redemptions.ts`, `streamlabs-relay.ts` and `twitch-relay.ts` have no imports and stay
+self-contained IIFEs, loaded as plain classic `<script>`s.
+
+`npm run build` also runs [`scripts/copy-vendor.mjs`](scripts/copy-vendor.mjs) after `tsc`, which
+copies `socket.io-client`'s browser bundle into `public/js/vendor/socket.io.js` for
+`streamlabs-relay.html` to load as a plain `<script>`, self-hosted rather than pulled from a CDN at
+runtime. `socket.io-client` is pinned to `2.x` in `package.json` (not the current major) because
+Streamlabs' socket server still speaks the Socket.IO v2 protocol; a v3/v4 client can't complete the
+handshake against it. `twitch-relay.ts` needs no such vendoring, it drives Twitch's EventSub
+directly over a plain `WebSocket`.
 
 `public/js/**/*.js` is **gitignored**, not committed. Both places that actually ship this repo
 build fresh before publishing, so there's nothing worth keeping in git:

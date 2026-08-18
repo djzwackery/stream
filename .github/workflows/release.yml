@@ -44,7 +44,7 @@ jobs:
         # archive is flat (alerts.html at the root, not public/alerts.html).
         run: |
           (cd public && zip -r ../dj-zwackery-overlays.zip . -x '.DS_Store' -x '*/.DS_Store')
-          zip -j dj-zwackery-overlays.zip README.md
+          zip -j dj-zwackery-overlays.zip README.md SETUP.md
 
       - name: Create release 🚀
         env:

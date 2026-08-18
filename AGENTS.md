@@ -97,6 +97,16 @@ Every `uses:` step in `.github/workflows/*.yml` is pinned to a full commit SHA, 
 `git ls-remote --tags https://github.com/<owner>/<repo>.git refs/tags/<tag>` and keep the original
 tag as a trailing comment so the pinned version is still readable at a glance.
 
+`socket.io-client` is pinned to `2.x` specifically (not just exactly), because that's a real
+protocol constraint, not just a supply-chain one: Streamlabs' socket server speaks the Socket.IO v2
+wire protocol, and a v3/v4 client can't complete the handshake against it at all, so this one can't
+be bumped to "latest" the way the others eventually could. It also means `npm audit` will keep
+flagging its (EOL, unpatched) transitive deps; the moderate ReDoS in `parseuri` is in the URL
+parser socket.io-client hands the connection URL to, and the only URL that ever reaches it here is
+the one `streamlabs-relay.ts` builds itself, not attacker-controlled input, so the practical
+exposure is low. Don't `npm audit fix --force` this one, it'll happily "fix" it by bumping past 2.x
+and breaking the actual connection.
+
 ## Keeping in sync with the design system
 
 `public/styles.css` and `public/tokens/` are copies from the DJ Zwackery design system repo.

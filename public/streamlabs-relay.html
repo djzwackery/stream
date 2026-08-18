@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>DJ Zwackery: Streamlabs relay</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--void);
+        color: var(--white);
+        font-family: var(--font-body);
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        min-height: 100vh;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 2rem;
+        text-transform: uppercase;
+      }
+      p {
+        margin: 0;
+        color: var(--ink-dim);
+        max-width: 70ch;
+      }
+      code {
+        color: var(--cyan);
+      }
+      .row {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      label {
+        font-family: var(--font-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.75rem;
+        color: var(--acid);
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      input,
+      button {
+        font-family: var(--font-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.85rem;
+        border-radius: 0;
+      }
+      input {
+        background: var(--void-2);
+        color: var(--white);
+        border: 2px solid var(--magenta);
+        padding: 0.6rem;
+        min-width: 360px;
+      }
+      button {
+        background: var(--magenta-contrast);
+        color: var(--white);
+        border: 3px solid var(--void);
+        box-shadow: 6px 6px 0 var(--void);
+        padding: 0.7rem 1rem;
+        cursor: pointer;
+        transition:
+          transform 0.08s ease,
+          box-shadow 0.08s ease;
+      }
+      button:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 8px 8px 0 var(--void);
+      }
+      button:active {
+        transform: translate(3px, 3px);
+        box-shadow: 2px 2px 0 var(--void);
+      }
+      #status {
+        font-family: var(--font-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--ink-dim);
+      }
+      #status[data-state="connected"] {
+        color: var(--acid);
+      }
+      #status[data-state="error"] {
+        color: var(--magenta);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Streamlabs relay</h1>
+    <p>
+      Connects to your Streamlabs account over its Socket API and forwards
+      follows, subscriptions, bits, raids and tips into every
+      <code>alerts.html</code> source on this origin, the same way
+      <code>control.html</code> does. Twitch Channel Point redemptions aren't
+      covered, Streamlabs doesn't relay those; see README.md.
+    </p>
+    <div class="row">
+      <label
+        >Socket API token<input
+          id="token"
+          type="password"
+          placeholder="Streamlabs: Settings -> API Settings -> API Tokens"
+      /></label>
+      <button type="button" id="connect">Connect</button>
+    </div>
+    <p id="status" data-state="idle">Not connected.</p>
+    <script src="js/vendor/socket.io.js"></script>
+    <script src="js/streamlabs-relay.js"></script>
+  </body>
+</html>
