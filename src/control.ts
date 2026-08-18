@@ -215,7 +215,18 @@
       "messageTemplate",
     ],
   };
-  const SL_CSS = "html,body{margin:0;background:transparent;overflow:hidden}";
+  // Unlike alerts.html (always exactly 1920x1080, since that's the OBS
+  // browser source size everyone's told to set), the Alert Box widget's own
+  // box size is whatever Streamlabs gives it, not a fixed canvas, so #root
+  // fills that box at 100% rather than hardcoding 1920x1080: AlertStage's
+  // own layout (grid + placeItems) centers relative to #root's real size
+  // either way, but a hardcoded 1920x1080 #root inside a smaller real box
+  // centers against a canvas the box never actually shows, throwing off
+  // the visible centering, follow's small non-takeover banner especially.
+  const SL_CSS = [
+    "html,body{margin:0;height:100%;background:transparent;overflow:hidden}",
+    "#root{position:fixed;inset:0;width:100%;height:100%;font-family:var(--font-body);color:var(--white)}",
+  ].join("\n");
 
   function generateStreamlabsHtml(type: string): string {
     const tokens = SL_TOKENS[type] ?? [];
