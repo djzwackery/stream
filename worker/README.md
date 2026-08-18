@@ -65,19 +65,26 @@ Only needs doing once per deployment, not per stream.
    npx wrangler secret put TWITCH_CLIENT_ID
    npx wrangler secret put TWITCH_CLIENT_SECRET
    npx wrangler secret put TWITCH_REFRESH_TOKEN
-   npx wrangler secret put TWITCH_WEBHOOK_SECRET   # any long random string you generate yourself, e.g. `openssl rand -hex 32`
-   npx wrangler secret put API_TOKEN               # another one, separate from the above
+   npx wrangler secret put TWITCH_WEBHOOK_SECRET
+   npx wrangler secret put API_TOKEN
    ```
 
-   `TWITCH_WEBHOOK_SECRET` and `API_TOKEN` aren't from Twitch, they're secrets you invent yourself
-   (`openssl rand -hex 32` again is fine). `TWITCH_WEBHOOK_SECRET` is reused in step 7 below, Twitch
-   signs every webhook delivery with it so the Worker can tell a real notification from a forged
-   one. `API_TOKEN` gates `GET /twitch/avatar` and `POST /twitch/refresh` (see the Security model
-   section below): give it to whoever's pasting the Streamlabs Alert Box code, they paste it into
-   the JS box in place of the `PASTE_YOUR_API_TOKEN_HERE` placeholder
-   ([`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts)) before it goes into Streamlabs
-   (`control.html`'s own **API Token** field does this substitution for you and remembers it on
-   that browser), and keep it yourself for curling `/twitch/refresh` directly if you ever need to.
+   | Secret                  | Where it comes from                                    |
+   | ------------------------ | -------------------------------------------------------- |
+   | `TWITCH_CLIENT_ID`       | The Twitch application (step 2).                          |
+   | `TWITCH_CLIENT_SECRET`   | The Twitch application (step 2).                          |
+   | `TWITCH_REFRESH_TOKEN`   | The auth script's output (step 4).                        |
+   | `TWITCH_WEBHOOK_SECRET`  | Invent it yourself, e.g. `openssl rand -hex 32`.          |
+   | `API_TOKEN`              | Invent it yourself, e.g. `openssl rand -hex 32`.          |
+
+   `TWITCH_WEBHOOK_SECRET` is reused in step 7 below: Twitch signs every webhook delivery with it
+   so the Worker can tell a real notification from a forged one. `API_TOKEN` gates `GET
+   /twitch/avatar` and `POST /twitch/refresh` (see the Security model section below): give it to
+   whoever's pasting the Streamlabs Alert Box code, they paste it into the JS box in place of the
+   `PASTE_YOUR_API_TOKEN_HERE` placeholder ([`src/streamlabs-alertbox.ts`](../src/streamlabs-alertbox.ts))
+   before it goes into Streamlabs (`control.html`'s own **API Token** field does this substitution
+   for you and remembers it on that browser), and keep it yourself for curling `/twitch/refresh`
+   directly if you ever need to.
 
 6. **Deploy:**
 
