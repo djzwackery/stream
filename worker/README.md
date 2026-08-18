@@ -173,4 +173,4 @@ more infrastructure that would reintroduce the setup friction this design exists
 The webhook endpoint (`POST /twitch/webhook`) is authenticated properly, not just origin-checked:
 every delivery's HMAC-SHA256 signature is verified against `TWITCH_WEBHOOK_SECRET` before its
 payload is trusted (`verifyWebhookSignature` in `src/twitch.ts`), using a constant-time comparison
-so response timing can't leak the expected signature.
+so response timing can't leak the expected signature..
