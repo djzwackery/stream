@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="robots" content="noindex, nofollow" />
     <title>Zwackery: alert control</title>
     <link rel="stylesheet" href="styles.css" />
     <style>
@@ -25,6 +26,12 @@
         margin: 0;
         font-family: var(--font-display);
         font-size: 2rem;
+        text-transform: uppercase;
+      }
+      h2 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 1.3rem;
         text-transform: uppercase;
       }
       p {
@@ -120,6 +127,13 @@
       a:hover {
         color: var(--sun);
       }
+      #qb-url {
+        flex: 1;
+        min-width: 320px;
+        text-transform: none;
+        letter-spacing: normal;
+        font-family: ui-monospace, monospace;
+      }
     </style>
   </head>
   <body>
@@ -155,6 +169,36 @@
     </div>
     <div class="preview">
       <iframe id="pv" src="alerts.html" title="preview"></iframe>
+    </div>
+    <h2>URL builder</h2>
+    <p>
+      Builds the tuning query string from README's "Tuning, all via query
+      string" table. Blank fields fall back to the driver's own default and are
+      left out of the URL, so paste the result straight into an OBS/Streamlabs
+      browser source.
+    </p>
+    <div class="grid" id="qb">
+      <label
+        >Page<select id="qb-page">
+          <option value="alerts.html">alerts.html</option>
+          <option value="redemptions.html">redemptions.html</option>
+        </select></label
+      >
+      <label>Duration (ms)<input id="qb-duration" placeholder="5000" /></label>
+      <label>Top offset (px)<input id="qb-top" placeholder="96" /></label>
+      <label>Tip big<input id="qb-tipBig" placeholder="20" /></label>
+      <label>Tip huge<input id="qb-tipHuge" placeholder="100" /></label>
+      <label>Bits big<input id="qb-bitsBig" placeholder="1000" /></label>
+      <label>Bits huge<input id="qb-bitsHuge" placeholder="5000" /></label>
+      <label>Raid big<input id="qb-raidBig" placeholder="20" /></label>
+      <label>Raid huge<input id="qb-raidHuge" placeholder="100" /></label>
+      <label>Months big<input id="qb-monthsBig" placeholder="6" /></label>
+      <label>Gift huge<input id="qb-giftHuge" placeholder="10" /></label>
+      <label>Currency<input id="qb-currency" placeholder="AUD" /></label>
+    </div>
+    <div class="row">
+      <input id="qb-url" readonly />
+      <button type="button" id="qb-copy">Copy</button>
     </div>
     <script src="js/control.js"></script>
   </body>

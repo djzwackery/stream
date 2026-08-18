@@ -18,6 +18,15 @@
     return document.getElementById(id) as T;
   }
 
+  const AVATARS = [
+    "https://static-cdn.jtvnw.net/jtv_user_pictures/37567ea1-8246-4385-bcf6-8a3cdb9ca93b-profile_image-70x70.png",
+    "https://static-cdn.jtvnw.net/jtv_user_pictures/5e22a6ae-be13-4acc-9067-907f0a8b00b0-profile_image-70x70.png",
+    "https://static-cdn.jtvnw.net/jtv_user_pictures/2455c449-f3bd-4fd5-931e-aa34504dbb65-profile_image-50x50.png",
+  ];
+  function randomAvatar(): string {
+    return AVATARS[Math.floor(Math.random() * AVATARS.length)]!;
+  }
+
   let bc: BroadcastChannel | null = null;
   try {
     bc = new BroadcastChannel("zw-alerts");
@@ -54,6 +63,7 @@
       message: $<HTMLInputElement>("message").value || undefined,
       plan: 2,
       tier: $<HTMLSelectElement>("tier").value as AlertTier,
+      avatar: randomAvatar(),
     };
     if (type === "redeem") {
       o.reward = $<HTMLSelectElement>("reward").value;
@@ -112,5 +122,45 @@
       setTimeout(step, 6000);
     };
     step();
+  };
+
+  // Maps a query builder input's id to the query param it fills in, matching
+  // README's "Tuning, all via query string" table.
+  const QB_FIELDS: [string, string][] = [
+    ["qb-duration", "duration"],
+    ["qb-top", "top"],
+    ["qb-tipBig", "tipBig"],
+    ["qb-tipHuge", "tipHuge"],
+    ["qb-bitsBig", "bitsBig"],
+    ["qb-bitsHuge", "bitsHuge"],
+    ["qb-raidBig", "raidBig"],
+    ["qb-raidHuge", "raidHuge"],
+    ["qb-monthsBig", "monthsBig"],
+    ["qb-giftHuge", "giftHuge"],
+    ["qb-currency", "currency"],
+  ];
+  function buildUrl(): void {
+    const page = $<HTMLSelectElement>("qb-page").value;
+    const url = new URL(page, location.href);
+    for (const [id, param] of QB_FIELDS) {
+      const value = $<HTMLInputElement>(id).value.trim();
+      if (value) {
+        url.searchParams.set(param, value);
+      }
+    }
+    $<HTMLInputElement>("qb-url").value = url.href;
+  }
+  QB_FIELDS.forEach(([id]) =>
+    $<HTMLInputElement>(id).addEventListener("input", buildUrl),
+  );
+  $<HTMLSelectElement>("qb-page").addEventListener("change", buildUrl);
+  buildUrl();
+
+  $<HTMLButtonElement>("qb-copy").onclick = () => {
+    const urlField = $<HTMLInputElement>("qb-url");
+    urlField.select();
+    navigator.clipboard?.writeText(urlField.value).catch(() => {
+      // clipboard permission denied; the field is still selected for a manual copy
+    });
   };
 })();

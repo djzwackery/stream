@@ -110,6 +110,14 @@ though this repo's `rewards.json` and `redemptions.html` were built assuming it 
 React-based when these components have no real use for a reconciler. Treat `src/components/` as
 regular source: edit it directly, no re-copy step, no patch markers to preserve.
 
+## Indexing
+
+Every page in `public/*.html` carries `<meta name="robots" content="noindex, nofollow">`. These
+are OBS/Streamlabs browser sources and dev-only tooling, not pages meant to show up in search
+results; a `robots.txt` at the site root wouldn't cover this repo's own deploy, since it's served
+under a path (`djzwackery.com/stream/...`) this repo doesn't own the root of. Add the tag to any
+new page under `public/`.
+
 ## Adding a reward
 
 Edit `public/rewards.json` (see README.md for the shape) and drop a hosted GIF in `public/media/`

@@ -48,7 +48,8 @@ Two things happen automatically on every push to `main`:
 
 - **GitHub Pages** deploys `public/` via `.github/workflows/deploy.yml`. One-time setup:
   **Settings → Pages → Source = "GitHub Actions"**. Pages then serves at
-  `https://<user>.github.io/stream/alerts.html` (and the rest).
+  `https://djzwackery.com/stream/alerts.html` (and the rest), a custom domain in front of
+  `djzwackery.github.io`.
 - **A GitHub Release** is published with a zip of everything your broadcast software and the
   reward book need, no `src/`, no `node_modules/`, none of the dev tooling. See below.
 
@@ -58,7 +59,7 @@ Every push to `main` publishes a [GitHub Release](../../releases) via
 `.github/workflows/release.yml`. The download link is always the same:
 
 ```
-https://github.com/<org>/stream/releases/latest/download/dj-zwackery-overlays.zip
+https://github.com/djzwackery/stream/releases/latest/download/dj-zwackery-overlays.zip
 ```
 
 Bookmark that instead of a specific release, it always resolves to the newest build. Unzip over
@@ -96,7 +97,8 @@ load `alerts.html?test=raid&tier=huge`. In `redemptions.html` the test key is **
 
 **StreamElements custom widget (easiest, no server).** In the SE overlay editor add a _Custom Widget_,
 paste the contents of `alerts.html` into the HTML box and point the script tag at your Pages URL
-(`<script type="module" src="https://…/stream/js/zw-alerts.js">`). The driver already maps
+(`<script type="module" src="https://djzwackery.com/stream/js/zw-alerts.js">`). The driver already
+maps
 `follower-latest`, `subscriber-latest`, `tip-latest`, `cheer-latest` and `raid-latest`, including
 gifted subs, months, bit counts and raid party size.
 
