@@ -163,7 +163,7 @@ function buildEvent(
     };
   }
   if (boxType === "bits") {
-    const amount = parseAmount(readToken("amount"));
+    const amount = parseAmount(readToken(tokens, "amount"));
     return {
       type: "bits",
       name,
@@ -175,7 +175,7 @@ function buildEvent(
     };
   }
   if (boxType === "raid") {
-    const party = parseAmount(readToken("count")) || 1;
+    const party = parseAmount(readToken(tokens, "count")) || 1;
     return {
       type: "raid",
       name,
@@ -189,7 +189,7 @@ function buildEvent(
       tier,
     };
   }
-  const amount = parseAmount(readToken("amount"));
+  const amount = parseAmount(readToken(tokens, "amount"));
   return {
     type: "tip",
     name,
