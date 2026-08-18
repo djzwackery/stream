@@ -34,14 +34,20 @@ const fmt = (n: number): string =>
   String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 
 /**
- * Reads one `[data-token]` span's text inside `#zw-tokens`. Streamlabs
- * leaves a token's literal `{name}`-shaped placeholder in place when it
- * doesn't apply to this alert type or the platform didn't supply a value,
- * so anything still shaped like `{...}` is treated as absent, not as data.
+ * Reads one `[data-token]` span's text, one of `#zw-tokens`' own direct
+ * children only (`>`, not a descendant selector): Streamlabs' own
+ * `{messageTemplate}` rendering reuses the exact same `data-token="name"`
+ * attribute internally, for its own animated letter-by-letter markup
+ * nested inside our `messageTemplate` span, so a descendant selector can
+ * match that instead of our own top-level span for the same token name.
+ * Streamlabs leaves a token's literal `{name}`-shaped placeholder in place
+ * when it doesn't apply to this alert type or the platform didn't supply a
+ * value, so anything still shaped like `{...}` is treated as absent, not
+ * as data.
  */
 function readToken(name: string): string {
   const el = document.querySelector<HTMLElement>(
-    `#zw-tokens [data-token="${name}"]`,
+    `#zw-tokens > [data-token="${name}"]`,
   );
   const text = el?.textContent?.trim() ?? "";
   if (!text || /^\{.*\}$/.test(text)) {
@@ -195,7 +201,7 @@ function render(startedAt = Date.now()): void {
     return;
   }
   const nameEl = document.querySelector<HTMLElement>(
-    '#zw-tokens [data-token="name"]',
+    '#zw-tokens > [data-token="name"]',
   );
   const name = readToken("name");
   console.log("[zw]", {
