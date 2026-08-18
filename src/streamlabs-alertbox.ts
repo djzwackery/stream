@@ -79,7 +79,7 @@ function readName(): string {
 }
 
 function readAvatar(): string | undefined {
-  return readToken("profile_image") || readRichText("alert-image") || undefined;
+  return readRichText("alert-image") || undefined;
 }
 
 function parseAmount(raw: string): number {
@@ -252,11 +252,23 @@ const MAX_WAIT_MS = 3000;
 const POLL_INTERVAL_MS = 100;
 
 /**
- * Streamlabs doesn't guarantee `{name}` is already substituted into the DOM
- * the instant this script runs, only that it eventually is, so this polls
- * for up to `MAX_WAIT_MS`, well short of the alert's own 5s duration,
- * instead of a single read that could catch it too early and fall back to
- * "someone" for a real, named event.
+ * The second token (besides `{name}`) each type's display actually depends
+ * on, so `render()` knows to wait for it too.
+ */
+const NUMERIC_TOKEN: Partial<Record<StreamlabsAlertBoxType, string>> = {
+  resub: "amount",
+  giftsub: "count",
+  bits: "amount",
+  raid: "count",
+  tip: "amount",
+};
+
+/**
+ * Streamlabs doesn't guarantee its tokens are already substituted into the
+ * DOM the instant this script runs, only that they eventually are, so this
+ * polls for up to `MAX_WAIT_MS`, well short of the alert's own 5s duration,
+ * instead of a single read that could catch `{name}` or `NUMERIC_TOKEN` too
+ * early and render with a default instead of the real value.
  */
 async function render(startedAt = Date.now()): Promise<void> {
   const tokens = document.getElementById("zw-tokens");
@@ -269,18 +281,19 @@ async function render(startedAt = Date.now()): Promise<void> {
     );
     return;
   }
-  // TEMPORARY: remove once the raid {count} token is confirmed working.
-  if (boxType === "raid") {
-    console.log("[zw] raid tokens:", tokens.outerHTML);
-  }
   const name = readName();
-  if (!name && Date.now() - startedAt < MAX_WAIT_MS) {
+  // Only {name} was ever waited on, so a type whose display depends on a
+  // second token (party size, months, amount...) could render before that
+  // one had substituted, silently falling back to its own default.
+  const numericToken = NUMERIC_TOKEN[boxType];
+  const numericReady = !numericToken || readToken(numericToken) !== "";
+  if ((!name || !numericReady) && Date.now() - startedAt < MAX_WAIT_MS) {
     setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
     return;
   }
-  if (!name) {
+  if (!name || !numericReady) {
     console.warn(
-      "[zw] streamlabs-alertbox.js: no name resolved, falling back to 'someone'",
+      "[zw] streamlabs-alertbox.js: token(s) never resolved, using defaults",
       tokens.outerHTML,
     );
   }

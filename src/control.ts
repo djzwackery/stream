@@ -148,25 +148,15 @@
     });
   }
 
-  // Tokens Streamlabs' Alert Box substitutes per alert type (verified against
-  // github.com/neferent/streamlabs-custom-code-starter's real templates).
-  // profile_image is included defensively on every type even though it isn't
-  // in that reference material: streamlabs-alertbox.ts treats any token that
-  // comes through still shaped like "{token}" as absent, so an unrecognised
-  // one costs nothing if Streamlabs doesn't actually support it.
+  // Tokens Streamlabs' Alert Box substitutes per alert type (verified
+  // against github.com/neferent/streamlabs-custom-code-starter's real
+  // templates). profile_image isn't included: confirmed live it never
+  // substitutes, Streamlabs leaves it as the literal "{profile_image}".
   const SL_TOKENS: Record<string, string[]> = {
-    follow: ["name", "profile_image", "img", "messageTemplate"],
-    sub: [
-      "name",
-      "profile_image",
-      "img",
-      "message",
-      "userMessage",
-      "messageTemplate",
-    ],
+    follow: ["name", "img", "messageTemplate"],
+    sub: ["name", "img", "message", "userMessage", "messageTemplate"],
     resub: [
       "name",
-      "profile_image",
       "img",
       "amount",
       "message",
@@ -176,23 +166,14 @@
     giftsub: ["name", "count"],
     bits: [
       "name",
-      "profile_image",
       "img",
       "amount",
       "message",
       "userMessage",
       "messageTemplate",
     ],
-    raid: ["name", "profile_image", "img", "count", "messageTemplate"],
-    tip: [
-      "name",
-      "profile_image",
-      "img",
-      "amount",
-      "message",
-      "userMessage",
-      "messageTemplate",
-    ],
+    raid: ["name", "img", "count", "messageTemplate"],
+    tip: ["name", "img", "amount", "message", "userMessage", "messageTemplate"],
   };
   // #root fills the widget's own real size instead of the 1920x1080
   // alerts.html always assumes: AlertStage centers relative to #root, and a
