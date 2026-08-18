@@ -1,4 +1,4 @@
-# Stream Overlays
+# Stream Overlays 🎬
 
 Browser-source overlays for OBS, Streamlabs, and similar broadcast software, written in TypeScript
 and compiled to plain `<script>`s so each page stays a drop-in file with no build step for the
@@ -22,29 +22,33 @@ worker/                  Cloudflare Worker relaying Twitch Channel Point redempt
 serve.json               local-dev-only config for `npm start` (kept out of public/), see ARCHITECTURE.md
 ```
 
-## Local development
+## 🚀 Local development
 
 ```bash
 npm install
 npm start
 ```
 
-Opens a static server at `http://localhost:5500`. Visit it for a hub page linking to every
-overlay, each pre-loaded with a test event so the (otherwise transparent, near-invisible outside
-your broadcast software) pages actually show something.
+Opens a static server at `http://localhost:5500`: a hub page linking to every overlay, each
+pre-loaded with a test event so the (otherwise transparent, near-invisible outside your broadcast
+software) pages actually show something.
 
-Editing a driver's behaviour means editing TypeScript, not the compiled `.js`:
+> [!NOTE]
+> Node is pinned via `.node-version`. If you use [`fnm`](https://github.com/Schniz/fnm) or `nvm`,
+> run `fnm use` / `nvm use` in the project root first.
 
-```bash
-npm run watch       # tsc --watch, recompiles src/*.ts on save
-npm run build       # one-off compile
-npm run typecheck   # type-check without emitting
-npm run lint        # eslint . (add --fix via npm run lint:fix)
-npm run format      # prettier --write .
-npm run check       # format:check + lint + typecheck, what CI runs
-```
+Editing a driver's behaviour means editing TypeScript under `src/`, not the compiled `.js`:
 
-## Publish
+| Command             | Description                                                    |
+| ------------------- | -------------------------------------------------------------- |
+| `npm run watch`     | Recompiles `src/*.ts` on save (`tsc --watch`).                 |
+| `npm run build`     | One-off compile.                                               |
+| `npm run typecheck` | Type-checks without emitting.                                  |
+| `npm run lint`      | Lints the code with ESLint (`npm run lint:fix` to auto-fix).   |
+| `npm run format`    | Formats the code with Prettier.                                |
+| `npm run check`     | Runs format:check, lint, and typecheck together, what CI runs. |
+
+## 🚢 Publish
 
 Two things happen automatically on every push to `main`:
 
@@ -60,7 +64,7 @@ own `.github/workflows/deploy-worker.yml`, only when `worker/**` changes, and ne
 `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo secrets set once. See
 [worker/README.md](worker/README.md) for the one-time setup.
 
-## Downloading updates without git
+## 📦 Downloading updates without git
 
 Every push to `main` publishes a [GitHub Release](../../releases) via
 `.github/workflows/release.yml`. The download link is always the same:
@@ -69,14 +73,15 @@ Every push to `main` publishes a [GitHub Release](../../releases) via
 https://github.com/djzwackery/stream/releases/latest/download/dj-zwackery-overlays.zip
 ```
 
-Bookmark that instead of a specific release, it always resolves to the newest build. Unzip over
-the existing folder on disk and reload the browser sources.
+> [!TIP]
+> Bookmark that link instead of a specific release, it always resolves to the newest build. Unzip
+> over the existing folder on disk and reload the browser sources.
 
 Releases are tagged with a plain build counter, `0.0.1`, `0.0.2`, `0.0.3` and so on. There's no
 semver here since there's no compatibility contract to signal, just "is this newer than what I
 have on disk." Every push to `main` bumps it by one.
 
-## OBS / Streamlabs
+## 🎥 OBS / Streamlabs
 
 Streamlabs Desktop shares OBS Studio's source model, so the same steps apply in both:
 **Sources → + → Browser** for each page:
@@ -98,7 +103,7 @@ Test without waiting for a real event: open the source's **Interact** window and
 (follow / sub / tip / bits / raid / redeem). Hold **shift** for the big tier, **alt** for huge. Or
 load `alerts.html?test=raid&tier=huge`. In `redemptions.html` the test key is **6**.
 
-## Wiring real events
+## 🔌 Wiring real events
 
 `alerts.html` listens on several inputs at once, use whichever you have. This stream runs
 **Streamlabs**, so that's the primary path; StreamElements is documented further down as an
@@ -152,7 +157,7 @@ The driver already maps `follower-latest`, `subscriber-latest`, `tip-latest`, `c
 `raid-latest`, including gifted subs, months, bit counts and raid party size, and its events do
 carry a profile picture, unlike Streamlabs'.
 
-## Point redemptions
+## 🎁 Point redemptions
 
 `rewards.json` is the reward book, the only file you edit when you add a reward:
 
@@ -179,10 +184,11 @@ what Twitch sends. Firing one by hand:
 ZW.fire({ type: "redeem", name: "ravemum74", reward: "Attempt anime save" });
 ```
 
-**Rehearsal panel.** Open `control.html` in a normal browser tab on the same origin; every button
-fires into the live browser source too, plus _Run all 18 in sequence_ to review the whole set.
+> [!TIP]
+> Open `control.html` in a normal browser tab on the same origin to rehearse: every button fires
+> into the live browser source too, plus _Run all 18 in sequence_ to review the whole set.
 
-## Tuning, all via query string
+## 🎛️ Tuning, all via query string
 
 `alerts.html?duration=5000&top=96&tipBig=20&tipHuge=100&bitsBig=1000&bitsHuge=5000&raidBig=20&raidHuge=100&monthsBig=6&giftHuge=10&currency=AUD`
 
@@ -194,8 +200,9 @@ fires into the live browser source too, plus _Run all 18 in sequence_ to review 
 - `accept=redeem`: which event types the page renders (`redemptions.html` sets this itself)
 - `rewards=rewards.json`: path to the reward book
 
-**Huge tier never blocks the stream**: the takeover scrim is a translucent void vignette and the
-accent strobe is confined to thin top and bottom bands.
+> [!NOTE]
+> **Huge tier never blocks the stream**: the takeover scrim is a translucent void vignette and the
+> accent strobe is confined to thin top and bottom bands.
 
 `now-playing.html?src=<url>&scale=1.6&swap=stutter&corner=bottom-right&poll=3000`
 
@@ -210,7 +217,7 @@ accent strobe is confined to thin top and bottom bands.
 The card hides itself (plays the exit animation, shows nothing) whenever there's no title or
 artist to show, rather than displaying a "nothing on the decks" placeholder.
 
-### Wiring the Now Playing app
+### 🎵 Wiring the Now Playing app
 
 [Now Playing](https://www.nowplayingapp.com) doesn't expose a JSON/text endpoint for third-party
 overlays, only its own pre-rendered widget. The way to get its live track data into _this_ card is

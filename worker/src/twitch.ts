@@ -143,14 +143,21 @@ interface TwitchUserResponse {
 }
 
 const AVATAR_CACHE_TTL_SECONDS = 60 * 60 * 24;
+// Bump this to invalidate every cached avatar at once (e.g. after a bad
+// batch got cached before a bug fix): old entries become unreachable under
+// the new prefix and just expire off their own TTL, no KV cleanup needed.
+const AVATAR_CACHE_VERSION = "v2";
 
 /**
  * Looks up a Twitch user's current profile image by login name, so the
  * Streamlabs Alert Box driver (which gets no reliable avatar token from
- * Streamlabs itself) can show a real photo. Caches the result in KV
- * (including a negative "not found" result, as an empty string) since the
- * same regulars redeem/follow repeatedly and avatars rarely change: a
- * cache hit costs one KV read instead of a Helix round trip.
+ * Streamlabs itself) can show a real photo. Caches a real result in KV
+ * (including a genuine "not found", as an empty string) since the same
+ * regulars redeem/follow repeatedly and avatars rarely change: a cache hit
+ * costs one KV read instead of a Helix round trip. A failed request (an
+ * expired access token, a Helix hiccup) isn't cached: caching that would
+ * turn one transient failure into a full day of false "no avatar" for that
+ * login, long after the underlying problem is gone.
  */
 export async function getUserAvatar(
   kv: KVNamespace,
@@ -158,7 +165,7 @@ export async function getUserAvatar(
   accessToken: string,
   login: string,
 ): Promise<string | null> {
-  const cacheKey = `avatar:${login.toLowerCase()}`;
+  const cacheKey = `avatar:${AVATAR_CACHE_VERSION}:${login.toLowerCase()}`;
   const cached = await kv.get(cacheKey);
   if (cached !== null) {
     return cached || null;
@@ -172,9 +179,11 @@ export async function getUserAvatar(
       },
     },
   );
-  const avatarUrl = res.ok
-    ? ((await res.json()) as TwitchUserResponse).data[0]?.profile_image_url
-    : undefined;
+  if (!res.ok) {
+    return null;
+  }
+  const avatarUrl = ((await res.json()) as TwitchUserResponse).data[0]
+    ?.profile_image_url;
   await kv.put(cacheKey, avatarUrl ?? "", {
     expirationTtl: AVATAR_CACHE_TTL_SECONDS,
   });

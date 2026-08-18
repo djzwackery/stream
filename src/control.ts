@@ -194,20 +194,15 @@
       "messageTemplate",
     ],
   };
-  // Unlike alerts.html (always exactly 1920x1080, since that's the OBS
-  // browser source size everyone's told to set), the Alert Box widget's own
-  // box size is whatever Streamlabs gives it, not a fixed canvas, so #root
-  // fills that box at 100% rather than hardcoding 1920x1080: AlertStage's
-  // own layout (grid + placeItems) centers relative to #root's real size
-  // either way, but a hardcoded 1920x1080 #root inside a smaller real box
-  // centers against a canvas the box never actually shows, throwing off
-  // the visible centering, follow's small non-takeover banner especially.
-  // #alert-image-wrap/#alert-text-wrap carry the img/messageTemplate/
-  // userMessage tokens Streamlabs appears to key off by id (see
-  // SL_RICH_TOKEN_IDS below), so they can't sit inside the `hidden`
-  // #zw-tokens div with the rest; hidden here with plain CSS instead, kept
-  // off-screen without relying on an attribute Streamlabs' own injection
-  // might treat differently.
+  // #root fills the widget's own real size instead of the 1920x1080
+  // alerts.html always assumes: AlertStage centers relative to #root, and a
+  // hardcoded 1920x1080 here would center against a canvas the widget never
+  // actually shows.
+  // #alert-image-wrap/#alert-text-wrap carry the id-keyed tokens (see
+  // SL_RICH_TOKEN_IDS below), so they can't sit inside the hidden
+  // #zw-tokens div; hidden here with plain CSS instead, off-screen rather
+  // than relying on an attribute Streamlabs' own injection might treat
+  // differently.
   const SL_CSS = [
     "html,body{margin:0;height:100%;background:transparent;overflow:hidden}",
     "#root{position:fixed;inset:0;width:100%;height:100%;font-family:var(--font-body);color:var(--white)}",
@@ -228,17 +223,9 @@
     tip: ["receipt", "jar", "banner"],
   };
 
-  // Neither tier nor variant is computed from the event data, both are
-  // baked into each generated widget: paste "Tip / Huge / Jar" into its own
-  // Alert Box variation and let Streamlabs' own condition (amount/months/
-  // etc., set in its UI, not here) decide when that variation fires, same
-  // idea as generating one widget per type already.
-  // img/messageTemplate/userMessage appear to be keyed off these specific
-  // element ids, not simple text substitution: Streamlabs' own default
-  // template uses exactly these ids, and removing an id from it stops that
-  // token substituting at all. The rest (name, amount, count, ...) go in
-  // the plain hidden token div, matching how they've substituted correctly
-  // there in testing.
+  // img/messageTemplate/userMessage substitute by element id, not text
+  // matching (see readRichText's doc in streamlabs-alertbox.ts); the rest
+  // go in the plain hidden token div instead.
   const SL_RICH_TOKEN_IDS: Record<string, string> = {
     img: "alert-image",
     messageTemplate: "alert-message",
@@ -337,13 +324,12 @@
   const API_TOKEN_PLACEHOLDER = "PASTE_YOUR_API_TOKEN_HERE";
   const API_TOKEN_STORAGE_KEY = "zw-api-token";
 
-  // The JS box doesn't vary per type, streamlabs-alertbox.ts reads the type
-  // off data-alert-type in the HTML box at run time, so it's fetched once.
-  // Streamlabs' JS box runs the pasted script standalone, it can't resolve
-  // `import`s, so this is the esbuild-bundled, self-contained build, not
-  // tsc's own module output. Kept as-fetched here, separate from what's
-  // shown: the token substitution below re-derives the displayed value
-  // from this each time rather than mutating it in place.
+  // The JS box doesn't vary per type (streamlabs-alertbox.ts reads the type
+  // off data-alert-type at run time), so it's fetched once, as the
+  // esbuild-bundled self-contained build (Streamlabs runs it standalone, it
+  // can't resolve `import`s). Kept separate from what's shown: the token
+  // substitution below re-derives the displayed value each time instead of
+  // mutating it in place.
   let slJsBundle = "";
 
   function renderSlJs(): void {

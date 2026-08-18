@@ -1,9 +1,9 @@
-# Twitch relay Worker
+# Twitch relay Worker 📡
 
 A small Cloudflare Worker that relays Twitch Channel Point redemptions to `redemptions.html` and
 looks up real Twitch avatars for the Streamlabs Alert Box driver, so a streamer using this repo
 never has to hold a Twitch token themselves or reconnect anything before going live. See the root
-[README.md](../README.md#wiring-real-events) and
+[README.md](../README.md#-wiring-real-events) and
 [SETUP.md](../SETUP.md#3-twitch-channel-point-redemptions) for how this fits into the rest of the
 repo; this file is the deploy-it-once checklist and the security write-up, for whoever maintains
 the repo, not something a streamer using it needs to read.
@@ -20,7 +20,7 @@ This is a separate deployable project from the rest of the repo: its own `packag
 `npm run build`/`deploy.yml` at the repo root. Root `npm run check`/`format` still sweep
 `worker/**/*.ts` for Prettier, but nothing here is linted by the root `eslint.config.js`.
 
-## One-time setup
+## ⚙️ One-time setup
 
 Only needs doing once per deployment, not per stream.
 
@@ -202,19 +202,18 @@ open either: it's gated on `API_TOKEN`, a bearer token checked with a constant-t
 not committed anywhere and never present in the public bundle (see `API_TOKEN`'s doc in
 `src/streamlabs-alertbox.ts` for how the placeholder that _does_ ship publicly gets swapped for the
 real thing only in the copy that reaches Streamlabs). `POST /twitch/refresh` (the manual trigger for
-the same token refresh the Cron runs every 3 hours, meant to be curled from a terminal) is gated
-the same way. Be honest about what the token
-does and doesn't buy: it's real access control against a stranger who stumbles on either endpoint
-with no token at all, but it isn't a secret in the cryptographic sense once it's pasted into a
-specific streamer's own Streamlabs dashboard, since that streamer (or anyone with access to their
-OBS/Streamlabs setup) can view-source the pasted JS same as any client-side code. That's an
-acceptable tradeoff here: the token is shared deliberately with a trusted party for the widget to
-work at all, not something being protected from them. What it does meaningfully stop is casual
-discovery by anyone who isn't that streamer. On top of the token, `AVATAR_RATE_LIMITER`
-(`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on every plan) caps
-`/twitch/avatar` requests at 20/minute per IP, so even a leaked token can't turn this into an
-unmetered proxy to Twitch's API, and input validation rejects anything that doesn't look like a real
-Twitch username.
+the same token refresh the Cron runs every 3 hours, meant to be curled from a terminal) is gated the
+same way. Be honest about what the token does and doesn't buy: it's real access control against a
+stranger who stumbles on either endpoint with no token at all, but it isn't a secret in the
+cryptographic sense once it's pasted into a specific streamer's own Streamlabs dashboard, since that
+streamer (or anyone with access to their OBS/Streamlabs setup) can view-source the pasted JS same as
+any client-side code. That's an acceptable tradeoff here: the token is shared deliberately with a
+trusted party for the widget to work at all, not something being protected from them. What it does
+meaningfully stop is casual discovery by anyone who isn't that streamer. On top of the token,
+`AVATAR_RATE_LIMITER` (`wrangler.toml`, Cloudflare's native Workers Rate Limiting binding, free on
+every plan) caps `/twitch/avatar` requests at 20/minute per IP, so even a leaked token can't turn
+this into an unmetered proxy to Twitch's API, and input validation rejects anything that doesn't
+look like a real Twitch username.
 
 Every endpoint reachable from a browser and gated on `API_TOKEN` sends `Access-Control-Allow-Origin:
 *`, since it's the token, not the origin, deciding who's allowed in; skipping this would make those

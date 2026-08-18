@@ -48,9 +48,8 @@ export interface Env {
    */
   AVATAR_RATE_LIMITER: RateLimit;
   /**
-   * Bearer token required by `/twitch/avatar` and `/twitch/refresh`, shared out-of-band
-   * with whoever pastes the Streamlabs Alert Box code (see worker/README.md and
-   * control.html's own API Token field), not something the public ever sees.
+   * Bearer token gating `/twitch/avatar` and `/twitch/refresh`, see the Security model
+   * section of worker/README.md.
    */
   API_TOKEN: string;
 }
@@ -108,24 +107,15 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
 
 const LOGIN_PATTERN = /^[a-zA-Z0-9_]{1,25}$/;
 
-// Open to any origin: every endpoint gated on requireApiToken below relies
-// on the token, not the origin, to decide who's allowed in, so there's
-// nothing meaningful an origin check would add here. Every response using
-// this carries it, including the error paths, without it a rejected
-// request (bad token, bad login, rate limited) fails as an opaque network
+// Token-gated endpoints rely on the token, not the origin, so this is open
+// to any origin; without it a rejected request fails as an opaque network
 // error client-side instead of a readable status the caller can branch on.
 const API_CORS_HEADERS = { "Access-Control-Allow-Origin": "*" };
 
 /**
- * Shared bearer-token gate for `/twitch/avatar` and `/twitch/refresh`:
- * everything a maintainer or a pasted Streamlabs widget calls directly, as
- * opposed to `/twitch/webhook` (called by Twitch itself, which has no way
- * to send our token, hence its own HMAC signature check instead) and `/ws`
- * (called from inside an OBS browser source, where requiring a token would
- * mean putting it in the source's URL, reversing the "nothing to configure
- * in OBS" setup this project was built around; origin-checking stays good
- * enough there since it only gates read-only visibility into events
- * already broadcast to viewers a few seconds later anyway).
+ * Shared bearer-token gate for `/twitch/avatar` and `/twitch/refresh`, see
+ * the Security model section of worker/README.md for why `/ws` and
+ * `/twitch/webhook` use different mechanisms instead.
  */
 function requireApiToken(request: Request, env: Env): Response | null {
   const auth = request.headers.get("Authorization") ?? "";
@@ -139,12 +129,9 @@ function requireApiToken(request: Request, env: Env): Response | null {
 }
 
 /**
- * Answers the browser's CORS preflight `OPTIONS` request for a
- * token-gated, cross-origin endpoint. A preflight never carries the real
- * `Authorization` header it's asking permission to send, so it must be
- * answered here, before the real handler's own token check runs, or every
- * call fails as a blocked preflight regardless of whether the token is
- * right.
+ * Answers a token-gated endpoint's CORS preflight: a preflight never carries
+ * the real `Authorization` header it's asking permission to send, so it has
+ * to pass before the real handler's own token check ever runs.
  */
 function corsPreflight(methods: string): Response {
   return new Response(null, {
@@ -159,18 +146,10 @@ function corsPreflight(methods: string): Response {
 }
 
 /**
- * Resolves a Twitch login to their current avatar URL, for the Streamlabs
- * Alert Box driver, which gets no reliable avatar token from Streamlabs
- * itself. Not origin-gated like `/ws`: the Alert Box widget runs on a
- * Streamlabs-controlled origin, not djzwackery.com, so `Origin`/`Referer`
- * checking against our own domain isn't meaningful here. Gated instead on
- * `API_TOKEN` (`requireApiToken`), a bearer token shared out-of-band with
- * whoever pastes the Streamlabs code (never committed, never present in
- * the public bundle, see `API_TOKEN`'s doc in `src/streamlabs-alertbox.ts`),
- * plus an IP-keyed rate limit (`AVATAR_RATE_LIMITER`, `wrangler.toml`) as a
- * second layer, since even a token that leaks out of one streamer's own
- * Streamlabs setup shouldn't turn this into an unmetered proxy to Twitch's
- * API.
+ * Resolves a Twitch login to their avatar URL for the Streamlabs Alert Box
+ * driver, which gets no reliable avatar token from Streamlabs itself. See
+ * the Security model section of worker/README.md for why this skips the
+ * origin check and relies on `API_TOKEN` plus `AVATAR_RATE_LIMITER` instead.
  */
 async function handleAvatar(request: Request, env: Env): Promise<Response> {
   const denied = requireApiToken(request, env);
@@ -184,8 +163,7 @@ async function handleAvatar(request: Request, env: Env): Promise<Response> {
       headers: API_CORS_HEADERS,
     });
   }
-  // No origin check to key a rate limit off, so this keys off the caller's
-  // IP instead, the standard fallback for an endpoint anyone can call.
+  // No origin to key a rate limit off, so this uses the caller's IP instead.
   const ip = request.headers.get("cf-connecting-ip") ?? "unknown";
   const { success } = await env.AVATAR_RATE_LIMITER.limit({ key: ip });
   if (!success) {
@@ -215,14 +193,10 @@ async function handleAvatar(request: Request, env: Env): Promise<Response> {
 }
 
 /**
- * Forces the token refresh the Cron would otherwise only run every 3
- * hours: `wrangler secret put` alone doesn't populate KV, only a
- * successful refresh does, so right after the one-time setup there's
- * nothing in KV yet for `/twitch/avatar` to read until either this runs
- * once or the Cron eventually fires on its own. Also useful
- * later if a refresh ever gets stuck and needs retrying without waiting.
- * Meant to be curled from a terminal, so gated the same as the other
- * maintainer-facing endpoints: `requireApiToken`, not origin-checked.
+ * Forces the token refresh the Cron otherwise only runs every 3 hours:
+ * useful right after setup, before KV has anything in it yet, or any time
+ * a refresh gets stuck and needs retrying without waiting. Meant to be
+ * curled from a terminal.
  */
 async function handleRefresh(request: Request, env: Env): Promise<Response> {
   const denied = requireApiToken(request, env);
