@@ -217,13 +217,17 @@
     </div>
     <h2>Streamlabs Alert Box code</h2>
     <p>
-      Paste into Streamlabs: Alert Box widget → pick a type → enable Custom
-      HTML/CSS/JS → paste the HTML box below into "HTML", the CSS box into
-      "CSS", and the JS box into "JS" (all three, Streamlabs runs its JS box
-      as a standalone script, not a module, so it can't be a
+      Pick a type, tier and layout variant, generate one widget per combination
+      you actually want (e.g. "Tip / Huge / Jar"), paste it into its own
+      Streamlabs Alert Box variation, and set that variation's own condition in
+      Streamlabs (amount, months, etc.) to when it should fire; neither tier nor
+      variant is computed from the event here, both are fixed per pasted widget.
+      Custom HTML/CSS/JS → paste the HTML box below into "HTML", the CSS box
+      into "CSS", and the JS box into "JS" (all three, Streamlabs runs its JS
+      box as a standalone script, not a module, so it can't be a
       <code>&lt;script&gt;</code> tag inside the HTML box). The JS box is the
-      same for every type, only HTML/CSS change with the dropdown. One-time
-      per type, no token, nothing to reconnect: Streamlabs runs this itself
+      same for every combination, only HTML changes with the dropdowns. One-time
+      per widget, no token, nothing to reconnect: Streamlabs runs this itself
       from then on.
     </p>
     <div class="row">
@@ -238,6 +242,14 @@
           <option value="tip">Tip</option>
         </select></label
       >
+      <label
+        >Tier<select id="sl-tier">
+          <option value="small">Small</option>
+          <option value="big" selected>Big</option>
+          <option value="huge">Huge</option>
+        </select></label
+      >
+      <label>Variant<select id="sl-variant"></select></label>
     </div>
     <div class="row">
       <textarea id="sl-html" readonly></textarea>

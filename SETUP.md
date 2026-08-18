@@ -66,24 +66,34 @@ wait behind a raid in the queue, and you can position the two independently.
 ## 2. Connect Streamlabs (follows, subs, bits, raids, tips)
 
 Streamlabs' own Alert Box widget can run this repo's alert layout directly, no relay or ongoing
-connection needed. Do this once per alert type:
+connection needed. Each generated widget is a fixed type **and** tier (e.g. "Tip / Huge"), Streamlabs
+own condition system (per-variation, based on amount/months/whatever the alert type supports) is
+what decides which one fires, this repo doesn't compute a tier from the amount. Do this once per
+type/tier combination you actually want:
 
 1. Open [`control.html`](https://djzwackery.com/stream/control.html) and scroll to **Streamlabs
-   Alert Box code**. Pick a type from the dropdown (Follow / Sub / Resub / Gift sub / Bits / Raid /
-   Tip).
+   Alert Box code**. Pick a type (Follow / Sub / Resub / Gift sub / Bits / Raid / Tip) and a tier
+   (Small / Big / Huge) from the two dropdowns.
 2. In the Streamlabs dashboard (not Streamlabs Desktop, the web dashboard at streamlabs.com): open
-   the **Alert Box** widget, pick the matching alert type, and enable **Custom HTML/CSS/JS** under
-   its Custom tab.
-3. Copy the generated **HTML** box into Streamlabs' HTML field, and the **CSS** box into its CSS
-   field. Leave the JS field empty, nothing to paste there.
-4. Save, and trigger a test alert of that type from Streamlabs' own dashboard to confirm it renders.
-5. Repeat for each of the other 6 types.
+   the **Alert Box** widget, pick the matching alert type, add a variation for this tier (or use the
+   default one if you only want a single tier for this type), and enable **Custom HTML/CSS/JS**
+   under its Custom tab.
+3. Copy the generated **HTML** box into Streamlabs' HTML field, the **CSS** box into its CSS field,
+   and the **JS** box into its JS field. All three, unlike the HTML/CSS-only version of this
+   feature you may have seen before: Streamlabs runs the JS box as its own standalone script, not a
+   module, so it can't be a `<script>` tag inside the HTML box.
+4. If you're using a variation for this tier, set that variation's own condition in Streamlabs (e.g.
+   "amount ≥ 100") so it only fires for events that should render at this tier.
+5. Save, and trigger a test alert from Streamlabs' own dashboard to confirm it renders.
+6. Repeat for each other type/tier combination you want a distinct widget for.
 
-That's it, permanently. Streamlabs re-renders this HTML fresh for every alert and handles queueing
-and duration itself, so there's no connection to keep alive, no token to expire, nothing to
-reconnect after restarting OBS or Streamlabs. Streamlabs' events don't reliably include a profile
-picture for every alert type, so some alerts may show the placeholder glyph instead of a photo,
-that's expected.
+That's it, permanently, once all your widgets are pasted. Streamlabs re-renders this HTML fresh for
+every alert and handles queueing and duration itself, so there's no connection to keep alive, no
+token to expire, nothing to reconnect after restarting OBS or Streamlabs. Streamlabs' Alert Box
+doesn't give custom code a real per-viewer avatar, only a static image the streamer picked in
+Streamlabs' own Image Gallery (if even that), so alerts render the placeholder glyph instead of a
+photo, that's a Streamlabs platform limit, not something this repo's code can work around without
+its own live Twitch API call.
 
 ## 3. Twitch (channel point redemptions)
 

@@ -228,29 +228,79 @@
     "#root{position:fixed;inset:0;width:100%;height:100%;font-family:var(--font-body);color:var(--white)}",
   ].join("\n");
 
-  function generateStreamlabsHtml(type: string): string {
+  // Layout variant options per Streamlabs box type, mirroring
+  // src/components/variants.ts's per-AlertType lists (resub/giftsub share
+  // sub's, since both map to the "sub" AlertType). Duplicated here rather
+  // than imported, control.ts stays import-free like redemptions.ts.
+  const SL_VARIANTS: Record<string, string[]> = {
+    follow: ["stamp", "ticker", "glitch"],
+    sub: ["card", "slab", "party"],
+    resub: ["card", "slab", "party"],
+    giftsub: ["card", "slab", "party"],
+    bits: ["meter", "chip", "slab"],
+    raid: ["squad", "siren", "band"],
+    tip: ["receipt", "jar", "banner"],
+  };
+
+  // Neither tier nor variant is computed from the event data, both are
+  // baked into each generated widget: paste "Tip / Huge / Jar" into its own
+  // Alert Box variation and let Streamlabs' own condition (amount/months/
+  // etc., set in its UI, not here) decide when that variation fires, same
+  // idea as generating one widget per type already.
+  function generateStreamlabsHtml(
+    type: string,
+    tier: string,
+    variant: string,
+  ): string {
     const tokens = SL_TOKENS[type] ?? [];
     const spans = tokens
       .map((t) => `    <span data-token="${t}">{${t}}</span>`)
       .join("\n");
     return [
       '<link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />',
-      `<div id="zw-tokens" data-alert-type="${type}" hidden>`,
+      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}" hidden>`,
       spans,
       "</div>",
       '<div id="root"></div>',
     ].join("\n");
   }
 
+  function fillSlVariants(): void {
+    const type = $<HTMLSelectElement>("sl-type").value;
+    const select = $<HTMLSelectElement>("sl-variant");
+    select.innerHTML = "";
+    (SL_VARIANTS[type] ?? []).forEach((v) => {
+      const o = document.createElement("option");
+      o.value = v;
+      o.textContent = v;
+      select.appendChild(o);
+    });
+  }
+
   function updateStreamlabsCode(): void {
     const type = $<HTMLSelectElement>("sl-type").value;
-    $<HTMLTextAreaElement>("sl-html").value = generateStreamlabsHtml(type);
+    const tier = $<HTMLSelectElement>("sl-tier").value;
+    const variant = $<HTMLSelectElement>("sl-variant").value;
+    $<HTMLTextAreaElement>("sl-html").value = generateStreamlabsHtml(
+      type,
+      tier,
+      variant,
+    );
     $<HTMLTextAreaElement>("sl-css").value = SL_CSS;
   }
-  $<HTMLSelectElement>("sl-type").addEventListener(
+  $<HTMLSelectElement>("sl-type").addEventListener("change", () => {
+    fillSlVariants();
+    updateStreamlabsCode();
+  });
+  $<HTMLSelectElement>("sl-tier").addEventListener(
     "change",
     updateStreamlabsCode,
   );
+  $<HTMLSelectElement>("sl-variant").addEventListener(
+    "change",
+    updateStreamlabsCode,
+  );
+  fillSlVariants();
   updateStreamlabsCode();
 
   // The JS box doesn't vary per type, streamlabs-alertbox.ts reads the type
