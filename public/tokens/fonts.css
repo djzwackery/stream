@@ -1,0 +1,5 @@
+/* The site self-hosts these via @fontsource (Bungee 400, Space Grotesk 400/500/700).
+   No binaries were included in the handoff, so the identical families are pulled from
+   Google Fonts here. Swap these @import lines for local @font-face rules if you want
+   to self-host — the family names and weights are unchanged. */
+@import url("https://fonts.googleapis.com/css2?family=Bungee&family=Space+Grotesk:wght@400;500;700&display=swap");

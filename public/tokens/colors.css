@@ -1,0 +1,24 @@
+/* All colours are authored in OKLCH, deliberately ~8% past the sRGB gamut boundary
+   so wide-gamut displays render the dayglo accents at full strength. sRGB hex
+   equivalents are noted for reference only — never author in hex. */
+:root {
+  /* Club-black base */
+  --void: oklch(12.7% 0.0314 308.4); /* #0a0410 — page background */
+  --void-2: oklch(18% 0.0531 304.71); /* #170a24 — lifted panel */
+  --void-3: oklch(22.63% 0.0756 304); /* #241038 — second lift / hairline */
+
+  /* Dayglo accents */
+  --magenta: oklch(65.71% 0.2758 358.57); /* #ff1f8f — primary, ON void */
+  --magenta-contrast: oklch(56.82% 0.2758 358.57); /* #e40074 — UNDER white text */
+  --acid: oklch(92.68% 0.2498 124.41); /* #c6ff00 — live state, focus rings */
+  --cyan: oklch(84.42% 0.1574 209.29); /* #00e5ff — links, chips */
+  --sun: oklch(91.68% 0.2068 101.41); /* #ffe600 — marquee, tip jar */
+
+  /* Ink */
+  --white: oklch(100% 0 0);
+  --ink-dim: oklch(76.09% 0.0563 304.21); /* #b9a9cf — secondary text */
+  --ink-shadow: oklch(35.53% 0.0175 299.2); /* wordmark drop layer */
+
+  /* Third-party brand colour used verbatim (Twitch partner tick) */
+  --twitch-purple: oklch(66.99% 0.2053 299.17);
+}

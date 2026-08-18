@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zwackery: now playing</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+      #root {
+        position: fixed;
+        display: flex;
+        font-family: var(--font-body);
+        color: var(--white);
+      }
+      #root[data-corner="bottom-right"] {
+        inset: auto 2.5rem 2.5rem auto;
+        justify-content: flex-end;
+      }
+      #root[data-corner="bottom-left"] {
+        inset: auto auto 2.5rem 2.5rem;
+      }
+      #root[data-corner="top-right"] {
+        inset: 2.5rem 2.5rem auto auto;
+        justify-content: flex-end;
+      }
+      #root[data-corner="top-left"] {
+        inset: 2.5rem auto auto 2.5rem;
+      }
+      a {
+        color: var(--cyan);
+      }
+      a:hover {
+        color: var(--sun);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-corner="bottom-right"></div>
+    <script type="module" src="js/zw-nowplaying.js"></script>
+  </body>
+</html>

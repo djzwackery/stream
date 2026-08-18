@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zwackery: alerts</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: transparent;
+        overflow: hidden;
+      }
+      #root {
+        position: fixed;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        font-family: var(--font-body);
+        color: var(--white);
+      }
+      a {
+        color: var(--cyan);
+      }
+      a:hover {
+        color: var(--sun);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="js/zw-alerts.js"></script>
+  </body>
+</html>

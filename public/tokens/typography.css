@@ -1,0 +1,20 @@
+:root {
+  --font-display: "Bungee", system-ui, sans-serif;
+  --font-body: "Space Grotesk", system-ui, sans-serif;
+  /* "label" role — uppercase technical treatment. Same face as body, no mono. */
+  --font-label: "Space Grotesk", system-ui, sans-serif;
+
+  /* One ladder for the whole brand; each size is a ROLE, not a raw size. */
+  --fs-label: 0.75rem; /* eyebrows, tags, nav, dates */
+  --fs-small: 0.9rem; /* secondary / meta */
+  --fs-body: 1.05rem; /* default reading size */
+  --fs-item: 1.15rem; /* card + list-item titles */
+  --fs-lead: clamp(1.2rem, 1.1rem + 0.5vw, 1.45rem); /* @kind other */
+  --fs-heading: clamp(1.9rem, 1.15rem + 2.6vw, 3.1rem); /* @kind other */ /* display screamers */
+
+  --lh-tight: 1.05; /* @kind font */
+  --lh-body: 1.6; /* @kind font */
+  --tracking-label: 0.12em;
+  --weight-body: 400;
+  --weight-strong: 700;
+}

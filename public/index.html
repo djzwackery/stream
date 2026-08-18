@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>DJ Zwackery overlays</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--void);
+        color: var(--white);
+        font-family: var(--font-body);
+        padding: 3rem 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+        align-items: center;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: var(--fs-heading);
+        text-transform: uppercase;
+        text-align: center;
+      }
+      p.lede {
+        margin: 0;
+        color: var(--ink-dim);
+        max-width: 60ch;
+        text-align: center;
+        line-height: var(--lh-body);
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 1.25rem;
+        max-width: 960px;
+        width: 100%;
+      }
+      a.card {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        background: var(--void-2);
+        border: var(--edge) solid var(--void);
+        box-shadow: var(--shadow-hard);
+        padding: 1.25rem;
+        text-decoration: none;
+        color: var(--white);
+        transition:
+          transform var(--ease-snap),
+          box-shadow var(--ease-snap);
+      }
+      a.card:hover {
+        transform: var(--lift);
+        box-shadow: var(--shadow-hard-lift);
+      }
+      a.card:active {
+        transform: var(--press);
+        box-shadow: var(--shadow-hard-press);
+      }
+      a.card h2 {
+        margin: 0;
+        font-family: var(--font-label);
+        font-weight: var(--weight-strong);
+        text-transform: uppercase;
+        letter-spacing: var(--tracking-label);
+        font-size: var(--fs-item);
+        color: var(--acid);
+      }
+      a.card p {
+        margin: 0;
+        color: var(--ink-dim);
+        font-size: var(--fs-small);
+        line-height: var(--lh-body);
+      }
+      a.card code {
+        color: var(--cyan);
+      }
+      footer {
+        color: var(--ink-dim);
+        font-size: var(--fs-label);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>DJ Zwackery overlays</h1>
+    <p class="lede">
+      Local dev hub. Each card opens the actual browser source: alerts,
+      redemptions and now-playing are transparent (built to sit over your scene
+      in OBS, Streamlabs, or similar), so they'll look mostly empty here until a
+      test event fires. The links below fire one automatically.
+    </p>
+    <div class="grid">
+      <a class="card" href="alerts.html?test=sub&amp;tier=big">
+        <h2>Alerts</h2>
+        <p>
+          Follow / sub / tip / bits / raid. Opens with a test
+          <code>sub</code> alert.
+        </p>
+      </a>
+      <a class="card" href="redemptions.html?test=redeem">
+        <h2>Redemptions</h2>
+        <p>
+          Point/loyalty redemptions, their own GIF. Opens with a test
+          redemption.
+        </p>
+      </a>
+      <a
+        class="card"
+        href="now-playing.html?title=Raise+Your+Fist&amp;artist=Darren+Styles"
+      >
+        <h2>Now playing</h2>
+        <p>The now-playing card, with a static test track.</p>
+      </a>
+      <a class="card" href="control.html">
+        <h2>Control panel</h2>
+        <p>
+          Rehearsal panel: fire any alert into every open browser source on this
+          origin.
+        </p>
+      </a>
+    </div>
+    <footer>
+      See README.md for OBS/Streamlabs setup and wiring up real events.
+    </footer>
+  </body>
+</html>

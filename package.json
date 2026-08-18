@@ -1,0 +1,31 @@
+{
+  "name": "@djzwackery/overlays",
+  "description": "Stream Overlays: browser-source overlays for DJ Zwackery's stream, for OBS, Streamlabs, and similar broadcast software.",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "serve -l 5500 -c ../serve.json public",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "check": "npm run format:check && npm run lint && npm run typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.8.1",
+    "eslint-plugin-jsdoc": "63.3.3",
+    "globals": "17.11.0",
+    "prettier": "3.9.6",
+    "serve": "14.2.6",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.67.0"
+  }
+}

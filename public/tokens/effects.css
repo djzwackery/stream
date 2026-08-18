@@ -1,0 +1,23 @@
+:root {
+  /* Flyer/sticker material: hard flat offsets, never a blur. */
+  --edge: 3px; /* the house border width */
+  --edge-thin: 2px; /* small stickers, form fields */
+  --shadow-hard: 6px 6px 0 var(--void);
+  --shadow-hard-lift: 8px 8px 0 var(--void); /* :hover */
+  --shadow-hard-press: 2px 2px 0 var(--void); /* :active */
+  --shadow-hard-sm: 3px 3px 0 var(--void); /* badges on photos */
+  --shadow-card-hover: 9px 9px 0 var(--magenta);
+
+  /* Zero radius everywhere. Kept as a token so nobody has to guess. */
+  --radius: 0px;
+
+  /* Physical press feedback */
+  --lift: translate(-2px, -2px); /* @kind other */
+  --press: translate(3px, 3px); /* @kind other */
+  --ease-snap: 0.08s ease; /* @kind other */
+  --ease-ui: 0.15s ease; /* @kind other */
+  --ease-slow: 0.6s cubic-bezier(0.3, 0.7, 0.2, 1); /* @kind other */
+
+  --focus-ring: var(--edge) solid var(--acid);
+  --focus-offset: 3px;
+}

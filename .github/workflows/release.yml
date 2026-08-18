@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 🛎️
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Setup Node 🔧
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies 📦
+        run: npm ci
+
+      - name: Build ⚙️
+        run: npm run build
+
+      - name: Compute next build number 🔢
+        id: version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # No semver here, just a plain build counter: 0.0.1, 0.0.2, 0.0.3 ...
+        run: |
+          latest="$(gh release view --json tagName --jq .tagName 2>/dev/null || echo 0.0.0)"
+          build="${latest##*.}"
+          echo "tag=0.0.$((build + 1))" >> "$GITHUB_OUTPUT"
+
+      - name: Package overlays 📦
+        # A fixed asset name means /releases/latest/download/dj-zwackery-overlays.zip
+        # always resolves to the newest build, one link to bookmark, no need to
+        # hunt down each release individually. Zipped from inside public/ so the
+        # archive is flat (alerts.html at the root, not public/alerts.html).
+        run: |
+          (cd public && zip -r ../dj-zwackery-overlays.zip . -x '.DS_Store' -x '*/.DS_Store')
+          zip -j dj-zwackery-overlays.zip README.md
+
+      - name: Create release 🚀
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" dj-zwackery-overlays.zip \
+            --title "Overlays ${{ steps.version.outputs.tag }}" \
+            --generate-notes

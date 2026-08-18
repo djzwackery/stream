@@ -1,0 +1,12 @@
+:root {
+  --space-xs: 0.5rem;
+  --space-sm: 0.85rem;
+  --space-md: 1.25rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+
+  /* One content column for the whole site. */
+  --wrap: 1180px;
+  --wrap-gutter: 2.5rem; /* width: min(100% - var(--wrap-gutter), var(--wrap)) */
+  --section-pad: clamp(2rem, 5vw, 3.5rem);
+}

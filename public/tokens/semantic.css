@@ -1,0 +1,30 @@
+/* Semantic aliases — reach for these first; the base tokens are the palette. */
+:root {
+  --surface-page: var(--void);
+  --surface-panel: var(--void-2);
+  --surface-raised: var(--void-3);
+  --surface-inset: var(--void); /* form fields */
+
+  --text-body: var(--white);
+  --text-muted: var(--ink-dim);
+  --text-on-accent: var(--void); /* on acid / cyan / sun / white */
+  --text-on-magenta: var(--white); /* only on --magenta-contrast */
+  --text-highlight: var(--magenta); /* [[highlighted]] words in screamers */
+  --text-label: var(--acid); /* eyebrows + form labels */
+  --text-link: var(--cyan);
+  --text-link-hover-underline: var(--sun);
+
+  --border-hairline: var(--void-3);
+  --border-strong: var(--void);
+  --border-accent: var(--magenta);
+  --border-live: var(--acid);
+
+  --state-live: var(--acid);
+  --state-error: var(--magenta);
+  --state-ok: var(--acid);
+
+  --accent-primary: var(--magenta);
+  --accent-secondary: var(--acid);
+  --accent-tertiary: var(--cyan);
+  --accent-warm: var(--sun);
+}

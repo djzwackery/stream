@@ -1,0 +1,11 @@
+node_modules/
+package-lock.json
+
+# Compiled from src/*.ts, gitignored, and reformatting it would just get
+# overwritten by the next `npm run build` anyway.
+public/js/
+
+# Copied from the DJ Zwackery design system repo; re-copy from there instead
+# of reformatting here, see AGENTS.md.
+public/styles.css
+public/tokens/

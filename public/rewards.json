@@ -1,0 +1,24 @@
+{
+  "Attempt anime save": {
+    "media": "media/attempt-anime-save.gif",
+    "cost": 25000,
+    "tier": "huge",
+    "variant": "sidecar",
+    "tone": "--magenta",
+    "headline": "Anime save"
+  },
+  "Hydrate the DJ": {
+    "media": "media/hydrate-the-dj.gif",
+    "cost": 1000,
+    "tier": "small",
+    "variant": "sidecar",
+    "tone": "--acid"
+  },
+  "Weights": {
+    "media": "media/weights.gif",
+    "cost": 3000,
+    "tier": "big",
+    "variant": "frame",
+    "tone": "--sun"
+  }
+}

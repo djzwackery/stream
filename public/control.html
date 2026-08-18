@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Zwackery: alert control</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--void);
+        color: var(--white);
+        font-family: var(--font-body);
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        min-height: 100vh;
+      }
+      h1 {
+        margin: 0;
+        font-family: var(--font-display);
+        font-size: 2rem;
+        text-transform: uppercase;
+      }
+      p {
+        margin: 0;
+        color: var(--ink-dim);
+        max-width: 70ch;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 0.6rem;
+        max-width: 960px;
+      }
+      .row {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      button,
+      select,
+      input {
+        font-family: var(--font-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-size: 0.85rem;
+        border-radius: 0;
+      }
+      button {
+        background: var(--magenta-contrast);
+        color: var(--white);
+        border: 3px solid var(--void);
+        box-shadow: 6px 6px 0 var(--void);
+        padding: 0.7rem 1rem;
+        cursor: pointer;
+        transition:
+          transform 0.08s ease,
+          box-shadow 0.08s ease;
+      }
+      button:hover {
+        transform: translate(-2px, -2px);
+        box-shadow: 8px 8px 0 var(--void);
+      }
+      button:active {
+        transform: translate(3px, 3px);
+        box-shadow: 2px 2px 0 var(--void);
+      }
+      button[data-tone="acid"] {
+        background: var(--acid);
+        color: var(--void);
+      }
+      select,
+      input {
+        background: var(--void-2);
+        color: var(--white);
+        border: 2px solid var(--magenta);
+        padding: 0.6rem;
+      }
+      label {
+        font-family: var(--font-label);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-size: 0.75rem;
+        color: var(--acid);
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
+      iframe {
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        transform: scale(0.5);
+        transform-origin: top left;
+      }
+      .preview {
+        width: 960px;
+        height: 540px;
+        overflow: hidden;
+        border: 3px solid var(--void-3);
+        background: var(--void-2);
+        background-image: radial-gradient(
+          color-mix(in oklch, var(--acid) 8%, transparent) 1px,
+          transparent 1px
+        );
+        background-size: 26px 26px;
+      }
+      a {
+        color: var(--cyan);
+      }
+      a:hover {
+        color: var(--sun);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Alert control</h1>
+    <p>
+      Fires test alerts into every <code>alerts.html</code> browser source on
+      this origin (the live one included) over BroadcastChannel with a
+      localStorage fallback. Keep this open on a second monitor for rehearsals.
+    </p>
+    <div class="row">
+      <label
+        >Tier<select id="tier">
+          <option>small</option>
+          <option selected>big</option>
+          <option>huge</option>
+        </select></label
+      >
+      <label
+        >Variant<select id="variant">
+          <option value="">cycle</option>
+        </select></label
+      >
+      <label>Name<input id="name" value="ravemum74" size="14" /></label>
+      <label>Value<input id="value" value="25" size="6" /></label>
+      <label
+        >Message<input id="message" value="drop the gabber" size="24"
+      /></label>
+      <label>Reward<select id="reward"></select></label>
+    </div>
+    <div class="grid" id="buttons"></div>
+    <div class="row">
+      <button data-tone="acid" id="cycle">Run all 18 in sequence</button>
+    </div>
+    <div class="preview">
+      <iframe id="pv" src="alerts.html" title="preview"></iframe>
+    </div>
+    <script src="js/control.js"></script>
+  </body>
+</html>

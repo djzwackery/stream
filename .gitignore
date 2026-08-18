@@ -1,0 +1,9 @@
+node_modules/
+.DS_Store
+*.zip
+.claude/
+
+# Compiled from src/*.ts by `npm run build`. deploy.yml and release.yml both
+# build fresh before publishing, so there's nothing to keep in git; see
+# ARCHITECTURE.md's "Build pipeline" section.
+public/js/**/*.js
