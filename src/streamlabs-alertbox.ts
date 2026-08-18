@@ -269,6 +269,10 @@ async function render(startedAt = Date.now()): Promise<void> {
     );
     return;
   }
+  // TEMPORARY: remove once the raid {count} token is confirmed working.
+  if (boxType === "raid") {
+    console.log("[zw] raid tokens:", tokens.outerHTML);
+  }
   const name = readName();
   if (!name && Date.now() - startedAt < MAX_WAIT_MS) {
     setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
