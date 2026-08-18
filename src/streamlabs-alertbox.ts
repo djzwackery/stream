@@ -170,19 +170,20 @@ function buildEvent(
   };
 }
 
-const MAX_NAME_RETRIES = 6;
-const RETRY_DELAY_MS = 50;
+const MAX_WAIT_MS = 3000;
+const POLL_INTERVAL_MS = 100;
 
 /**
- * Streamlabs replays this same loaded page for every alert rather than a
- * fresh navigation each time, and doesn't guarantee `{name}` is already
- * substituted into the DOM the instant this script runs on a replay, only
- * that it eventually is; a single synchronous read can catch it mid-swap
- * and fall back to "someone" even for a real, named event. Retrying a
- * few times over a fraction of a second is cheap against a 5s alert and
- * avoids that race without assuming anything about its exact timing.
+ * Streamlabs doesn't guarantee `{name}` is already substituted into the DOM
+ * the instant this script runs, only that it eventually is; a single
+ * synchronous read can catch it too early and fall back to "someone" even
+ * for a real, named event. Polls for up to MAX_WAIT_MS, well short of the
+ * alert's own 5s duration. Logs unconditionally (not worth gating behind a
+ * flag: Streamlabs hosts this in its own widget URL, not one the streamer
+ * can append a query string to) so a failure like this is diagnosable from
+ * whatever console the Streamlabs Interact window exposes.
  */
-function render(attempt = 0): void {
+function render(startedAt = Date.now()): void {
   const tokens = document.getElementById("zw-tokens");
   const boxType = tokens?.dataset.alertType as
     StreamlabsAlertBoxType | undefined;
@@ -193,8 +194,19 @@ function render(attempt = 0): void {
     );
     return;
   }
-  if (!readToken("name") && attempt < MAX_NAME_RETRIES) {
-    setTimeout(() => render(attempt + 1), RETRY_DELAY_MS);
+  const nameEl = document.querySelector<HTMLElement>(
+    '#zw-tokens [data-token="name"]',
+  );
+  const name = readToken("name");
+  console.log("[zw]", {
+    zwTokensCount: document.querySelectorAll('[id="zw-tokens"]').length,
+    tokensOuterHTML: tokens.outerHTML,
+    nameElFound: !!nameEl,
+    nameElRawText: nameEl?.textContent,
+    readTokenName: name,
+  });
+  if (!name && Date.now() - startedAt < MAX_WAIT_MS) {
+    setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
     return;
   }
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
