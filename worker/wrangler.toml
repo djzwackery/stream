@@ -1,0 +1,23 @@
+name = "zw-twitch-relay"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Created once via `wrangler kv namespace create TOKENS`, see worker/README.md.
+# Paste the id it prints here.
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+[[durable_objects.bindings]]
+name = "HUB"
+class_name = "Hub"
+
+# Free tier only supports the SQLite storage backend for Durable Objects.
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Hub"]
+
+[triggers]
+# Twitch access tokens last a few hours; refreshing well inside that window
+# leaves margin if a single refresh attempt fails.
+crons = ["0 */3 * * *"]

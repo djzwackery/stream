@@ -23,6 +23,12 @@ export default defineConfig(
     },
   },
   {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+  },
+  {
     files: ["src/**/*.ts"],
     plugins: { jsdoc },
     rules: {

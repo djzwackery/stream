@@ -12,14 +12,14 @@ public/                 everything your broadcast software, GitHub Pages and the
   redemptions.html          point/loyalty redemptions with their own GIF, transparent background
   now-playing.html          the now-playing card, transparent background
   now-playing-theme.html    the same card as a Now Playing app custom theme, see below
-  control.html              rehearsal panel: fires test alerts into every alerts.html on this origin
-  streamlabs-relay.html     connects to Streamlabs and forwards real events, see below
-  twitch-relay.html         connects to Twitch and forwards real redemptions, see below
-  js/                       compiled output of src/*.ts (incl. js/components/, js/vendor/), gitignored, see ARCHITECTURE.md
+  control.html              rehearsal panel: fires test alerts, generates the Streamlabs Alert Box code below
+  status.html               live health of the Twitch relay Worker, see below
+  js/                       compiled output of src/*.ts (incl. js/components/), gitignored, see ARCHITECTURE.md
   rewards.json              reward title to GIF, cost, tier, layout, accent
   media/                    your reward GIFs (see media/README.md)
   styles.css tokens/        the brand tokens
 src/                     TypeScript sources for the drivers above, see ARCHITECTURE.md
+worker/                  Cloudflare Worker relaying Twitch Channel Point redemptions, see worker/README.md
 serve.json               local-dev-only config for `npm start` (kept out of public/), see ARCHITECTURE.md
 ```
 
@@ -55,6 +55,11 @@ Two things happen automatically on every push to `main`:
   `djzwackery.github.io`.
 - **A GitHub Release** is published with a zip of everything your broadcast software and the
   reward book need, no `src/`, no `node_modules/`, none of the dev tooling. See below.
+
+`worker/` is a separate deployable project and isn't touched by either of those: it deploys via its
+own `.github/workflows/deploy-worker.yml`, only when `worker/**` changes, and needs
+`CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo secrets set once. See
+[worker/README.md](worker/README.md) for the one-time setup.
 
 ## Downloading updates without git
 
@@ -96,44 +101,30 @@ load `alerts.html?test=raid&tier=huge`. In `redemptions.html` the test key is **
 
 ## Wiring real events
 
-`alerts.html` listens on four inputs at once, use whichever you have.
+`alerts.html` listens on several inputs at once, use whichever you have. This stream runs
+**Streamlabs**, so that's the primary path; StreamElements is documented further down as an
+alternative for anyone forking this for a StreamElements-based setup instead.
 
-**StreamElements custom widget (easiest, no server).** In the SE overlay editor add a _Custom Widget_,
-paste the contents of `alerts.html` into the HTML box and point the script tag at your Pages URL
-(`<script type="module" src="https://djzwackery.com/stream/js/zw-alerts.js">`). The driver already
-maps
-`follower-latest`, `subscriber-latest`, `tip-latest`, `cheer-latest` and `raid-latest`, including
-gifted subs, months, bit counts and raid party size.
+**Streamlabs (follows, subs, bits, raids, tips).** No relay page or connection to maintain:
+Streamlabs' own Alert Box widget has a native per-type "Custom HTML/CSS/JS" editor that can run
+this repo's alert layout directly.
+[`control.html`](control.html)'s **Streamlabs Alert Box code** section generates a copy-pasteable
+HTML/CSS box per alert type ([`src/streamlabs-alertbox.ts`](src/streamlabs-alertbox.ts) is what
+that HTML loads); paste both boxes into the matching Alert Box type in the Streamlabs dashboard,
+once per type, see [SETUP.md](SETUP.md) for the click-by-click walkthrough. Streamlabs re-renders
+the pasted HTML fresh for every alert and handles queueing/duration itself, so once it's pasted
+there's nothing left running to reconnect, ever. Streamlabs' events don't reliably carry a profile
+image for every alert type, so some real alerts render the placeholder glyph instead of a photo.
 
-**Streamlabs.** Open [`streamlabs-relay.html`](streamlabs-relay.html), paste your Socket API token
-(Streamlabs dashboard: **Settings → API Settings → API Tokens → "Your Socket API Token"**) and hit
-**Connect**. It forwards Twitch follows, subscriptions, bits, raids and donations/tips into every
-`alerts.html` on this origin, the same BroadcastChannel/localStorage channel `control.html` uses.
-The token is remembered in `localStorage` and it reconnects automatically next time the page loads,
-so add it as its own OBS/Streamlabs browser source (any size, it renders nothing) and leave it
-running alongside your alert source, the same way you'd leave `alerts.html` itself running. Two
-things it can't do:
-
-- **Twitch Channel Point redemptions.** Streamlabs' Socket API doesn't relay these at all; see
-  Twitch relay, below.
-- **Avatars.** Streamlabs' events don't carry a profile image URL, so real Streamlabs-sourced
-  alerts render the placeholder glyph, not a photo, unlike StreamElements' events.
-
-**Twitch (Channel Point redemptions).** Streamlabs and StreamElements both leave redemptions out,
-so [`twitch-relay.html`](twitch-relay.html) talks to Twitch directly:
-
-1. Register an app at [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps), any name,
-   category "Application Integration". Add the page's own URL (it shows you the exact one to use)
-   to the app's **OAuth Redirect URLs**, both your local `http://localhost:5500/twitch-relay.html`
-   and the deployed one if you use both.
-2. Open the page, paste the app's **Client ID** (not the Client Secret, this never needs it), click
-   **Connect with Twitch**, approve the `channel:read:redemptions` scope.
-
-It subscribes over Twitch's EventSub WebSocket and forwards redemptions the same way the Streamlabs
-relay forwards everything else, straight into `redemptions.html`/`alerts.html`. Same deal as the
-Streamlabs relay: add it as its own persistent OBS/Streamlabs source. The one gap: this flow's token
-expires after a few hours (Twitch doesn't issue a refresh token for it), so reconnecting just means
-opening the page and clicking **Connect with Twitch** again.
+**Twitch (Channel Point redemptions).** Streamlabs' Alert Box has no type for these at all, so
+`redemptions.html` gets them from a small Cloudflare Worker
+([`worker/`](worker/README.md)) instead: Twitch's EventSub webhook posts a redemption to the
+Worker, which fans it out over a WebSocket to every connected `redemptions.html`. The Worker holds
+the Twitch access/refresh token itself and keeps it alive indefinitely, so there's no token to
+enter into OBS and nothing to reconnect before a stream; see
+[`worker/README.md`](worker/README.md) for deploying it (a one-time step for whoever maintains the
+repo, not something a streamer using it needs to touch) and
+[`status.html`](status.html) for checking it's healthy.
 
 **Your own EventSub relay.** Any script on the page can call `window.ZW.fire({...})`, or another
 window can `postMessage({zwAlert: {...}})`:
@@ -152,6 +143,13 @@ ZW.fire({ type: "raid", name: "gabberqueen", value: 312 });
 `type` is one of `follow` `sub` `tip` `bits` `raid` `redeem`. `value` is the amount, bits, months or
 party size, the driver picks the tier from it and formats the copy. Pass `avatar` (a 300×300 Twitch
 profile URL), `message`, `tier` or `variant` to override anything.
+
+**StreamElements custom widget**, if you're using that instead of Streamlabs: in the SE overlay
+editor add a _Custom Widget_, paste the contents of `alerts.html` into the HTML box and point the
+script tag at your Pages URL (`<script type="module" src="https://djzwackery.com/stream/js/zw-alerts.js">`).
+The driver already maps `follower-latest`, `subscriber-latest`, `tip-latest`, `cheer-latest` and
+`raid-latest`, including gifted subs, months, bit counts and raid party size, and its events do
+carry a profile picture, unlike Streamlabs'.
 
 ## Point redemptions
 

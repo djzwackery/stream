@@ -134,6 +134,18 @@
         letter-spacing: normal;
         font-family: ui-monospace, monospace;
       }
+      textarea {
+        flex: 1;
+        min-width: 320px;
+        min-height: 130px;
+        text-transform: none;
+        letter-spacing: normal;
+        font-family: ui-monospace, monospace;
+        resize: vertical;
+      }
+      #sl-css {
+        min-height: 48px;
+      }
     </style>
   </head>
   <body>
@@ -199,6 +211,34 @@
     <div class="row">
       <input id="qb-url" readonly />
       <button type="button" id="qb-copy">Copy</button>
+    </div>
+    <h2>Streamlabs Alert Box code</h2>
+    <p>
+      Paste into Streamlabs: Alert Box widget → pick a type → enable Custom
+      HTML/CSS/JS → paste the HTML box below into "HTML" and the CSS box into
+      "CSS", no JS box needed. One-time per type, no token, nothing to
+      reconnect: Streamlabs runs this itself from then on.
+    </p>
+    <div class="row">
+      <label
+        >Type<select id="sl-type">
+          <option value="follow">Follow</option>
+          <option value="sub">Sub</option>
+          <option value="resub">Resub</option>
+          <option value="giftsub">Gift sub</option>
+          <option value="bits">Bits</option>
+          <option value="raid">Raid</option>
+          <option value="tip">Tip</option>
+        </select></label
+      >
+    </div>
+    <div class="row">
+      <textarea id="sl-html" readonly></textarea>
+      <button type="button" id="sl-html-copy">Copy HTML</button>
+    </div>
+    <div class="row">
+      <textarea id="sl-css" readonly></textarea>
+      <button type="button" id="sl-css-copy">Copy CSS</button>
     </div>
     <script src="js/control.js"></script>
   </body>

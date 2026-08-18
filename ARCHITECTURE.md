@@ -12,14 +12,15 @@ public/redemptions.html       -> js/redemptions.js + js/zw-alerts.js (module)
 public/now-playing.html       -> js/zw-nowplaying.js (module)
 public/now-playing-theme.html -> same driver, absolute script URL, see below
 public/control.html           -> js/control.js (plain DOM, no components)
-public/streamlabs-relay.html  -> js/streamlabs-relay.js + js/vendor/socket.io.js, see below
-public/twitch-relay.html      -> js/twitch-relay.js (plain DOM, no components)
+public/status.html            -> js/status.js (plain DOM, no components)
 public/index.html             -> static, no driver: local dev hub linking to the pages above
+worker/src/index.ts           -> separate Cloudflare Worker project, see below
 ```
 
 `index.html` isn't a browser source at all. It's a nav page for `npm start` (and for anyone who opens
 the GitHub Pages root) so the transparent, otherwise-blank-looking pages are reachable without
-memorising their filenames or test query strings.
+memorising their filenames or test query strings. `status.html` isn't a browser source either: it's
+a plain webpage meant for a second monitor or a regular browser tab, not something added to OBS.
 
 `now-playing-theme.html` isn't a second driver either, it loads the exact same `zw-nowplaying.js`
 as `now-playing.html`. The only difference is its script URL is absolute (pointing at this repo's
@@ -35,17 +36,29 @@ first and rewrites the URL to `?accept=redeem` before the driver reads its query
 same driver renders a different slice of events depending on which page loaded it, instead of
 maintaining two copies of the event-queueing logic.
 
-`streamlabs-relay.html` and `twitch-relay.html` are inputs, not outputs: they render nothing, just
-connect to a third-party real-time API and turn its events into `RawAlertPayload`s broadcast over
-the same `BroadcastChannel("zw-alerts")` + `localStorage["zw-alert"]` channel `control.html` uses
-(see Event flow, below), so `zw-alerts.js` on any other open page picks them up exactly as if
-`control.html` had fired them. Add either as its own persistent OBS/Streamlabs source, same as
-`alerts.html` itself, and it keeps running (and reconnecting) independent of which alert page is
-currently visible. They exist as two separate pages, not one, because they cover two disjoint event
-sets: `streamlabs-relay.ts` gets follows/subs/bits/raids/tips from Streamlabs' Socket API, which
-doesn't relay Twitch Channel Point redemptions at all; `twitch-relay.ts` gets exactly those
-redemptions by talking to Twitch's own EventSub WebSocket directly, since nothing else in this
-repo's inputs covers them for a Streamlabs-only setup.
+Real events reach the two page families (Streamlabs alerts vs. Twitch redemptions) through two
+unrelated mechanisms, not one shared relay:
+
+- **Streamlabs' own Alert Box.** `src/streamlabs-alertbox.ts` isn't loaded by any page in
+  `public/`, it's pasted (via the HTML `control.html` generates) directly into Streamlabs' Alert
+  Box "Custom HTML/CSS/JS" editor, one alert type at a time. Streamlabs substitutes `{token}`
+  placeholders into that HTML itself before rendering it, so this driver's only job is reading
+  those substituted values off the DOM (`#zw-tokens [data-token]`) and calling `AlertStage.show()`
+  once; Streamlabs already owns receiving the Twitch event, queueing it, and controlling how long
+  it stays up, the jobs `zw-alerts.ts`'s own `fire`/`build`/`queue`/`pump` pipeline (see Event flow,
+  below) handles for every other input. There's deliberately no relay or ongoing connection here to
+  reconnect: Streamlabs re-renders the pasted HTML fresh for every alert.
+- **The Twitch relay Worker (`worker/`), for Channel Point redemptions.** Streamlabs' Alert Box has
+  no type for these at all, so they're not reachable through the mechanism above. `worker/` is a
+  completely separate deployable TypeScript project (its own `package.json`/`tsconfig.json`, not
+  compiled by this repo's `tsc`, not linted by this repo's `eslint.config.js`): a Cloudflare Worker
+  that receives Twitch's EventSub webhook, keeps a Twitch access token alive indefinitely via a
+  Cron-triggered refresh (see worker/README.md), and fans redemptions out over a WebSocket, hosted
+  by a Durable Object hub, to every connected `redemptions.html`. `zw-alerts.ts` opens that
+  WebSocket itself (see Event flow, below) whenever `CFG.accept` includes `redeem`, i.e. only on
+  `redemptions.html`. The Worker and the browser code share no TypeScript types, only a plain JSON
+  shape matching `RawAlertPayload`'s redeem fields, by deliberate design, since they're separate
+  projects that only ever communicate over the wire.
 
 ## Why `public/`
 
@@ -75,18 +88,18 @@ Source lives in [`src/`](src/) as TypeScript; `npm run build` runs `tsc`, which 
 `src/*.ts` to a matching `.js` file under `public/js/` (`rootDir: src`, `outDir: public/js`, see
 [`tsconfig.json`](tsconfig.json)). No bundler. `module: "ES2022"` with `moduleResolution:
 "Bundler"` means real `import`/`export` statements survive into the compiled output, so
-`src/components/*.ts` compiles to genuine ES modules that `zw-alerts.ts`/`zw-nowplaying.ts` import
-directly (`import { AlertStage } from "./components/AlertStage.js"`, resolved by the browser at
-`<script type="module">` load time, not bundled away). `control.ts`, `redemptions.ts`, `streamlabs-relay.ts` and `twitch-relay.ts` have no imports and stay
-self-contained IIFEs, loaded as plain classic `<script>`s.
+`src/components/*.ts` compiles to genuine ES modules that `zw-alerts.ts`/`zw-nowplaying.ts`/
+`streamlabs-alertbox.ts` import directly (`import { AlertStage } from "./components/AlertStage.js"`,
+resolved by the browser at `<script type="module">` load time, not bundled away). `control.ts`,
+`redemptions.ts` and `status.ts` have no imports and stay self-contained IIFEs, loaded as plain
+classic `<script>`s.
 
-`npm run build` also runs [`scripts/copy-vendor.mjs`](scripts/copy-vendor.mjs) after `tsc`, which
-copies `socket.io-client`'s browser bundle into `public/js/vendor/socket.io.js` for
-`streamlabs-relay.html` to load as a plain `<script>`, self-hosted rather than pulled from a CDN at
-runtime. `socket.io-client` is pinned to `2.x` in `package.json` (not the current major) because
-Streamlabs' socket server still speaks the Socket.IO v2 protocol; a v3/v4 client can't complete the
-handshake against it. `twitch-relay.ts` needs no such vendoring, it drives Twitch's EventSub
-directly over a plain `WebSocket`.
+`worker/` is not part of this build: it's a separate npm project with its own `tsconfig.json` and
+`wrangler deploy`/`wrangler dev` toolchain, since it runs on Cloudflare's platform, not compiled to
+`public/js/`. Root `npm run check`/`format` still sweep `worker/**/*.ts` for Prettier (harmless,
+same style), but this repo's `eslint.config.js` scopes its rules to `src/**/*.ts` specifically, so
+nothing in `worker/` is linted by it, that project is expected to stand on its own. See
+worker/README.md.
 
 `public/js/**/*.js` is **gitignored**, not committed. Both places that actually ship this repo
 build fresh before publishing, so there's nothing worth keeping in git:
@@ -107,16 +120,20 @@ see below.
 ## Event flow (`zw-alerts.js`)
 
 ```
-StreamElements   -+
-control.html      |-> fire(raw) -> build(raw) -> queue -> pump() -> stage.show(event, duration)
-postMessage       |                                 ^                        |
-?test= / keys 1-6-+                                 +---- onDone ------------+
+StreamElements       -+
+control.html          |
+postMessage           |-> fire(raw) -> build(raw) -> queue -> pump() -> stage.show(event, duration)
+?test= / keys 1-6     |                                 ^                        |
+Twitch relay Worker -+                                  +---- onDone ------------+
 ```
 
 - **`fire(raw)`** is the single entry point every input source calls. It drops the event if the
   page isn't configured to `accept` that type (`alerts.html` takes the five live events;
   `redemptions.html` takes `redeem`), otherwise normalises it with `build()` and pushes it onto
-  `queue`.
+  `queue`. The Twitch relay Worker input (`connectRedemptionHub()`) only runs when `CFG.accept`
+  includes `redeem`, i.e. only on `redemptions.html`: it opens a `WebSocket` to the Worker's `/ws`
+  and calls `fire()` on every message, reconnecting after a fixed delay if the socket drops, the
+  same shape as the `postMessage` listener just above it in the same file.
 - **`build(raw)`** maps a loosely-shaped `RawAlertPayload` (whatever StreamElements, control.html,
   or a manual test sends) onto the fixed `AlertStageEvent` shape `AlertStage` renders, picking a
   tier from the configured thresholds, formatting the amount/detail copy, and rotating or
@@ -128,6 +145,11 @@ postMessage       |                                 ^                        |
   `pump()` calls `stage.show(event, duration)` directly; there's no framework subscriber layer in
   between, `AlertStage.show()` owns the DOM diff (a full rebuild per event) and its own intro/hold/
   exit `setTimeout` chain internally.
+
+`streamlabs-alertbox.ts` doesn't go through any of this pipeline, it's not `zw-alerts.ts` and isn't
+loaded by `alerts.html`/`redemptions.html` at all. It builds one `AlertStageEvent` directly from
+Streamlabs' substituted tokens and calls `stage.show()` once, since Streamlabs itself already owns
+queueing and duration for the page this driver runs on. See "Shape of the thing", above.
 
 `zw-nowplaying.js` is simpler, no queue, since a new track just replaces the currently displayed
 one. `apply()` is the single entry point (called from the `?src=` poll, `window.ZWNP.set()`, or

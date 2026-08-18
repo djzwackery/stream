@@ -160,11 +160,89 @@
   $<HTMLSelectElement>("qb-page").addEventListener("change", buildUrl);
   buildUrl();
 
-  $<HTMLButtonElement>("qb-copy").onclick = () => {
-    const urlField = $<HTMLInputElement>("qb-url");
-    urlField.select();
-    navigator.clipboard?.writeText(urlField.value).catch(() => {
+  function copyField(id: string): void {
+    const field = $<HTMLInputElement | HTMLTextAreaElement>(id);
+    field.select();
+    navigator.clipboard?.writeText(field.value).catch(() => {
       // clipboard permission denied; the field is still selected for a manual copy
     });
+  }
+  $<HTMLButtonElement>("qb-copy").onclick = () => copyField("qb-url");
+
+  // Tokens Streamlabs' Alert Box substitutes per alert type (verified against
+  // github.com/neferent/streamlabs-custom-code-starter's real templates).
+  // profile_image is included defensively on every type even though it isn't
+  // in that reference material: streamlabs-alertbox.ts treats any token that
+  // comes through still shaped like "{token}" as absent, so an unrecognised
+  // one costs nothing if Streamlabs doesn't actually support it.
+  const SL_TOKENS: Record<string, string[]> = {
+    follow: ["name", "profile_image", "img", "messageTemplate"],
+    sub: [
+      "name",
+      "profile_image",
+      "img",
+      "message",
+      "userMessage",
+      "messageTemplate",
+    ],
+    resub: [
+      "name",
+      "profile_image",
+      "img",
+      "amount",
+      "message",
+      "userMessage",
+      "messageTemplate",
+    ],
+    giftsub: ["name", "count"],
+    bits: [
+      "name",
+      "profile_image",
+      "img",
+      "amount",
+      "message",
+      "userMessage",
+      "messageTemplate",
+    ],
+    raid: ["name", "profile_image", "img", "count", "messageTemplate"],
+    tip: [
+      "name",
+      "profile_image",
+      "img",
+      "amount",
+      "message",
+      "userMessage",
+      "messageTemplate",
+    ],
   };
+  const SL_CSS = "html,body{margin:0;background:transparent;overflow:hidden}";
+
+  function generateStreamlabsHtml(type: string): string {
+    const tokens = SL_TOKENS[type] ?? [];
+    const spans = tokens
+      .map((t) => `    <span data-token="${t}">{${t}}</span>`)
+      .join("\n");
+    return [
+      '<link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />',
+      `<div id="zw-tokens" data-alert-type="${type}" hidden>`,
+      spans,
+      "</div>",
+      '<div id="root"></div>',
+      '<script type="module" src="https://djzwackery.com/stream/js/streamlabs-alertbox.js"></script>',
+    ].join("\n");
+  }
+
+  function updateStreamlabsCode(): void {
+    const type = $<HTMLSelectElement>("sl-type").value;
+    $<HTMLTextAreaElement>("sl-html").value = generateStreamlabsHtml(type);
+    $<HTMLTextAreaElement>("sl-css").value = SL_CSS;
+  }
+  $<HTMLSelectElement>("sl-type").addEventListener(
+    "change",
+    updateStreamlabsCode,
+  );
+  updateStreamlabsCode();
+
+  $<HTMLButtonElement>("sl-html-copy").onclick = () => copyField("sl-html");
+  $<HTMLButtonElement>("sl-css-copy").onclick = () => copyField("sl-css");
 })();

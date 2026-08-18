@@ -6,11 +6,22 @@
  * 2. control.html on the same origin → BroadcastChannel + localStorage poll
  * 3. `window.ZW.fire({...})` / `postMessage({zwAlert:{...}})`
  * 4. `?test=sub&tier=huge` in the URL, and keys 1–6 in your browser source's "Interact" window
+ * 5. The Twitch relay Worker's WebSocket hub, `redemptions.html` only: real
+ *    Channel Point redemptions, the one event type nothing else here covers
+ *    live (see worker/README.md)
  */
 import { AlertStage } from "./components/AlertStage.js";
 import { VARIANTS } from "./components/variants.js";
 
 const qs = new URLSearchParams(location.search);
+
+/**
+ * The Twitch relay Worker's WebSocket hub. Baked in rather than left for a
+ * streamer to configure, `?worker=` overrides it for local testing against
+ * `wrangler dev`.
+ */
+const REDEMPTION_HUB_URL =
+  qs.get("worker") || "wss://zw-twitch-relay.YOUR_SUBDOMAIN.workers.dev/ws";
 
 function num(key: string, fallback: number): number {
   const v = parseFloat(qs.get(key) ?? "");
@@ -356,6 +367,26 @@ window.addEventListener("message", (m: MessageEvent<unknown>) => {
     fire(m.data.zwAlert as RawAlertPayload);
   }
 });
+
+if (CFG.accept.includes("redeem")) {
+  connectRedemptionHub();
+}
+function connectRedemptionHub(): void {
+  const ws = new WebSocket(REDEMPTION_HUB_URL);
+  ws.onmessage = (m: MessageEvent<unknown>) => {
+    try {
+      const data: unknown = JSON.parse(String(m.data));
+      if (isRecord(data) && data.type) {
+        fire(data as unknown as RawAlertPayload);
+      }
+    } catch {
+      // malformed message from the hub, wait for the next one
+    }
+  };
+  ws.onclose = () => {
+    setTimeout(connectRedemptionHub, 3000);
+  };
+}
 
 // manual test: ?test=sub&tier=huge, and keys 1–6 (hold shift = big, alt = huge)
 const TEST: Record<AlertType, RawAlertPayload> = {

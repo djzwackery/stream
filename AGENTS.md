@@ -7,6 +7,13 @@ static HTML pages under `public/`, each loading the alert/now-playing components
 `AlertStage` resolves an event to a layout; it covers both pipelines in more depth than is worth
 repeating here.
 
+Real events reach these pages two ways, neither of which is a page under `public/` in the usual
+sense: `src/streamlabs-alertbox.ts` is pasted into Streamlabs' own Alert Box dashboard, one type at
+a time, and `worker/` is a separate Cloudflare Worker project relaying Twitch Channel Point
+redemptions, with its own `package.json`, its own conventions in `worker/README.md`, and none of
+this file's TypeScript/lint rules applied to it (`eslint.config.js` only scopes to `src/**/*.ts`).
+See ARCHITECTURE.md's "Shape of the thing" for how both fit together.
+
 ## Comments & JSDoc
 
 **Every `interface`, every property within it, and every `type` alias needs its own multi-line
@@ -96,16 +103,6 @@ Every `uses:` step in `.github/workflows/*.yml` is pinned to a full commit SHA, 
 `v7`, can be moved to point at a different commit, but a SHA can't. Resolve a tag to its SHA with
 `git ls-remote --tags https://github.com/<owner>/<repo>.git refs/tags/<tag>` and keep the original
 tag as a trailing comment so the pinned version is still readable at a glance.
-
-`socket.io-client` is pinned to `2.x` specifically (not just exactly), because that's a real
-protocol constraint, not just a supply-chain one: Streamlabs' socket server speaks the Socket.IO v2
-wire protocol, and a v3/v4 client can't complete the handshake against it at all, so this one can't
-be bumped to "latest" the way the others eventually could. It also means `npm audit` will keep
-flagging its (EOL, unpatched) transitive deps; the moderate ReDoS in `parseuri` is in the URL
-parser socket.io-client hands the connection URL to, and the only URL that ever reaches it here is
-the one `streamlabs-relay.ts` builds itself, not attacker-controlled input, so the practical
-exposure is low. Don't `npm audit fix --force` this one, it'll happily "fix" it by bumping past 2.x
-and breaking the actual connection.
 
 ## Keeping in sync with the design system
 

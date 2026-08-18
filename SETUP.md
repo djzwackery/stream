@@ -14,69 +14,90 @@ https://djzwackery.com/stream/alerts.html
 https://djzwackery.com/stream/redemptions.html
 https://djzwackery.com/stream/now-playing.html
 https://djzwackery.com/stream/control.html
-https://djzwackery.com/stream/streamlabs-relay.html
-https://djzwackery.com/stream/twitch-relay.html
+https://djzwackery.com/stream/status.html
 ```
 
 Every push to `main` redeploys automatically, so these always serve the latest version.
 
-**One thing that trips people up:** OBS and Streamlabs Desktop each run their own embedded browser,
-completely separate from Chrome/Firefox/Safari on your desktop, with its own storage. The
-Streamlabs and Twitch relay pages remember your token/Client ID with `localStorage`, so if you type
-them into a regular desktop browser tab, OBS's browser source won't see them, it has to be entered
-**inside OBS**. Right-click the source in OBS's Sources panel and choose **Interact**, that opens a
-real interactive window you can click and type into, exactly like a normal browser tab. Do all the
-setup below through that window for any source that needs input (Streamlabs relay, Twitch relay).
+**The single most important thing to understand before any of this will make sense:** OBS and
+Streamlabs Desktop each run their own embedded browser, a completely separate program from
+Chrome/Firefox/Safari on your desktop, with its own storage. Even if both happen to be pointed at
+the exact same `http://localhost:5500/...` URL, they do **not** share `localStorage` or
+`BroadcastChannel` with each other, the same way Chrome and Firefox don't share cookies just
+because you typed the same address into both. This is why **firing test alerts from `control.html`
+doesn't reach OBS**: it sends events over `BroadcastChannel`/`localStorage`. Open `control.html` in
+a regular desktop browser tab and click a button, nothing will happen in an OBS source, even one
+pointed at the identical URL, because that source is running in a different browser entirely. This
+is the thing to check first if "firing an event from the browser doesn't reach OBS": you're very
+likely testing from the wrong browser, not looking at an actual bug.
+
+The fix: do it **inside OBS**. Right-click the relevant source in OBS's Sources panel and choose
+**Interact**, that opens a real interactive window you can click and type into, exactly like a
+normal browser tab, except it's running in OBS's own browser, so anything it broadcasts reaches
+OBS's other sources correctly. Do the test alert step below through an Interact window, not your
+desktop browser.
+
+Nothing else in this setup needs OBS's own browser: there's no token to type into a source anymore.
+Streamlabs alerts are wired by pasting a code snippet into Streamlabs' own dashboard (step 2), and
+Twitch Channel Point redemptions are already connected server-side once the Worker is deployed
+(step 3), neither one lives in `localStorage` inside an OBS source.
 
 ## 1. Add the overlay sources
 
 **Sources → + → Browser** for each of these (Streamlabs Desktop uses the same steps):
 
-| Source           | URL                                                   | Size        | Renders anything? |
-| ---------------- | ----------------------------------------------------- | ----------- | ----------------- |
-| Alerts           | `https://djzwackery.com/stream/alerts.html`           | 1920 × 1080 | Yes, transparent  |
-| Redemptions      | `https://djzwackery.com/stream/redemptions.html`      | 1920 × 1080 | Yes, transparent  |
-| Now playing      | `https://djzwackery.com/stream/now-playing.html`      | 1920 × 1080 | Yes, transparent  |
-| Streamlabs relay | `https://djzwackery.com/stream/streamlabs-relay.html` | 100 × 100   | No                |
-| Twitch relay     | `https://djzwackery.com/stream/twitch-relay.html`     | 100 × 100   | No                |
+| Source        | URL                                              | Size        | Renders anything? |
+| ------------- | ------------------------------------------------ | ----------- | ----------------- |
+| Alerts        | `https://djzwackery.com/stream/alerts.html`      | 1920 × 1080 | Yes, transparent  |
+| Redemptions   | `https://djzwackery.com/stream/redemptions.html` | 1920 × 1080 | Yes, transparent  |
+| Now playing   | `https://djzwackery.com/stream/now-playing.html` | 1920 × 1080 | Yes, transparent  |
+| Control panel | `https://djzwackery.com/stream/control.html`     | 100 × 100   | No                |
 
-For every one of these, leave **Shutdown source when not visible** **off**. The two relay sources
-need to stay connected even while off-screen or on a different scene, and an alert source that gets
-shut down can miss an event that arrives while it's dead. Position and size don't matter for the
-relay sources since they don't draw anything, just don't delete them.
+Add the **Control panel** source even though you don't need to see it, it's how you test that a
+real alert reaches OBS, from inside OBS's own browser, see step 5.
+
+For every one of these, leave **Shutdown source when not visible** **off**, so an alert source that
+gets shut down can't miss an event that arrives while it's dead (this matters most for
+Redemptions, which stays connected to the Worker over its own WebSocket in the background).
 
 Redemptions gets its own source (rather than sharing the Alerts one) so a redemption never has to
 wait behind a raid in the queue, and you can position the two independently.
 
 ## 2. Connect Streamlabs (follows, subs, bits, raids, tips)
 
-1. In the Streamlabs dashboard (not Streamlabs Desktop, the web dashboard at streamlabs.com): go to
-   **Settings → API Settings → API Tokens** and copy **Your Socket API Token**.
-2. In OBS, right-click the **Streamlabs relay** source → **Interact**.
-3. Paste the token, click **Connect**. The status line should change to **Connected.**
+Streamlabs' own Alert Box widget can run this repo's alert layout directly, no relay or ongoing
+connection needed. Do this once per alert type:
 
-That's it, it reconnects on its own from then on, including after restarting OBS. If it ever shows
-**Disconnected, retrying…**, leave it, it retries on its own. Streamlabs' events don't include a
-profile picture, so these alerts show the placeholder glyph instead of a photo, that's expected.
+1. Open [`control.html`](https://djzwackery.com/stream/control.html) and scroll to **Streamlabs
+   Alert Box code**. Pick a type from the dropdown (Follow / Sub / Resub / Gift sub / Bits / Raid /
+   Tip).
+2. In the Streamlabs dashboard (not Streamlabs Desktop, the web dashboard at streamlabs.com): open
+   the **Alert Box** widget, pick the matching alert type, and enable **Custom HTML/CSS/JS** under
+   its Custom tab.
+3. Copy the generated **HTML** box into Streamlabs' HTML field, and the **CSS** box into its CSS
+   field. Leave the JS field empty, nothing to paste there.
+4. Save, and trigger a test alert of that type from Streamlabs' own dashboard to confirm it renders.
+5. Repeat for each of the other 6 types.
 
-## 3. Connect Twitch (channel point redemptions)
+That's it, permanently. Streamlabs re-renders this HTML fresh for every alert and handles queueing
+and duration itself, so there's no connection to keep alive, no token to expire, nothing to
+reconnect after restarting OBS or Streamlabs. Streamlabs' events don't reliably include a profile
+picture for every alert type, so some alerts may show the placeholder glyph instead of a photo,
+that's expected.
 
-Streamlabs doesn't relay Channel Point redemptions at all, so this is a separate connection direct
-to Twitch.
+## 3. Twitch (channel point redemptions)
 
-1. Go to [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) and register an
-   application. Any name; category **Application Integration** is fine.
-2. In OBS, right-click the **Twitch relay** source → **Interact**. It shows you the exact redirect
-   URL to register, copy it.
-3. Back on the Twitch console, add that URL to the app's **OAuth Redirect URLs** and save.
-4. Copy the app's **Client ID** (not the Client Secret, this page never uses it).
-5. Back in OBS's Interact window, paste the Client ID and click **Connect with Twitch**. Log in and
-   approve the request. You'll land back on the relay page showing **Connected as
-   <your channel>, listening for redemptions.**
+Streamlabs doesn't relay Channel Point redemptions at all (its Alert Box has no type for them), so
+these come from a small Cloudflare Worker instead, already deployed and running, nothing to set up
+here. The **Redemptions** source added in step 1 connects to it automatically over a WebSocket and
+stays connected in the background.
 
-This connection expires after a few hours (Twitch doesn't hand out a long-lived token for this kind
-of flow), you'll see the status change to **Token expired**. Reconnecting is the same one click,
-**Connect with Twitch** again, no need to redo steps 1-4.
+If you ever want to double check it's healthy, either your own or before going live, open
+[`status.html`](https://djzwackery.com/stream/status.html) on a second monitor or in any regular
+browser tab, no OBS needed: it shows the Twitch token's last refresh time and how many OBS sources
+are currently connected. Green means healthy; if a card ever turns red, see
+[worker/README.md](worker/README.md) or ping whoever deployed the Worker, this isn't something
+fixable from inside OBS.
 
 ## 4. Now Playing app (optional)
 
@@ -87,9 +108,12 @@ just won't show anything.
 
 ## 5. Test everything
 
-Open `https://djzwackery.com/stream/control.html` (a normal browser tab is fine for this one, it's
-read-only test data, not a saved token). Every button fires straight into whatever alert sources
-are open on the same origin, OBS's included:
+Two different things you might want to check, and they need two different setups, because of the
+separate-browser issue explained above:
+
+**Does the alert look right?** Open `https://djzwackery.com/stream/control.html` in a normal
+desktop browser tab, that's fine for this, nothing here needs a saved token. Every button fires
+into `control.html`'s own built-in preview pane, right there on the page, no OBS required:
 
 - Click **follow** / **sub** / **tip** / **bits** / **raid** / **redeem** individually, tune tier,
   variant, name, value, message, or reward first.
@@ -98,8 +122,20 @@ are open on the same origin, OBS's included:
 - The **URL builder** section generates a tuned `alerts.html?...` URL, e.g. a longer `duration` or
   a different `top` offset, paste the result back into OBS's browser source URL field.
 
-Or skip the control panel: open the Alerts source's own **Interact** window and press **1**-**6**
-(follow / sub / tip / bits / raid / redeem), holding **shift** for the big tier or **alt** for huge.
+**Does it actually reach OBS?** The desktop browser tab above can't answer this, it's a different
+browser from OBS's, see "Before you start". To check the real source: right-click the **Control
+panel** source you added in step 1 → **Interact**, and click the same buttons from there instead.
+Now you're firing from inside OBS's own browser, so it reaches the real Alerts/Redemptions sources
+too, watch them update live in the OBS preview.
+
+Or skip the control panel entirely: open the Alerts source's own **Interact** window and press
+**1**-**6** (follow / sub / tip / bits / raid / redeem), holding **shift** for the big tier or
+**alt** for huge, that's also running in OBS's browser, so it works the same way.
+
+**Are real events actually connected?** Open [`status.html`](https://djzwackery.com/stream/status.html)
+in any regular browser tab (it's not an OBS source, and it doesn't need one). It shows the Twitch
+Worker's token health and how many OBS sources are currently connected to it, a quick check before
+going live that doesn't require triggering a real Twitch redemption to confirm the pipe works.
 
 ## 6. Customize
 
@@ -110,13 +146,20 @@ Or skip the control panel: open the Alerts source's own **Interact** window and 
 
 ## Troubleshooting
 
-- **Nothing ever appears, even from `control.html`.** Check **Shutdown source when not visible** is
-  off on the Alerts/Redemptions source, and that you're testing from the same origin the source is
-  actually loading (`djzwackery.com` vs `localhost` won't talk to each other).
-- **Streamlabs/Twitch relay says "Not connected" after you set it up.** You likely typed the
-  token/Client ID into a regular desktop browser instead of the OBS source's own **Interact**
-  window, see "Before you start" above.
-- **Redemptions never fire for real, only from `control.html`.** Streamlabs doesn't relay Channel
-  Point redemptions, that needs the separate Twitch relay (step 3).
-- **Real alerts have no profile picture.** Expected for Streamlabs-sourced events, it doesn't send
-  one. StreamElements-sourced events do include one, if you use that integration instead.
+- **Firing a test alert from `control.html` in my desktop browser doesn't reach OBS.** Expected,
+  see "Before you start": OBS's browser is a separate program from your desktop browser and doesn't
+  share `BroadcastChannel`/`localStorage` with it, even for the identical URL. Use the Control
+  panel source's own **Interact** window instead (step 5).
+- **Nothing ever appears, not even in `control.html`'s own preview pane.** Check **Shutdown source
+  when not visible** is off on the Alerts/Redemptions source, and that everything's on the same
+  origin (`djzwackery.com` vs `localhost` won't talk to each other either).
+- **A Streamlabs alert type never fires for real.** Double-check Custom HTML/CSS/JS is actually
+  enabled for that alert type in Streamlabs' Alert Box widget, and that you pasted both the HTML
+  and CSS boxes (not just one), see step 2.
+- **Redemptions never fire for real, only from `control.html`.** Check
+  [`status.html`](https://djzwackery.com/stream/status.html): if the Redemptions card shows 0
+  connected sources, the OBS source isn't reaching the Worker (check the URL and that **Shutdown
+  source when not visible** is off); if the token card is red, see
+  [worker/README.md](worker/README.md).
+- **Real alerts have no profile picture.** Expected, Streamlabs' Alert Box doesn't reliably supply
+  one for every alert type.

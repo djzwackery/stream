@@ -9,14 +9,15 @@
   },
   "scripts": {
     "start": "serve -l 5500 -c ../serve.json public",
-    "build": "tsc && node scripts/copy-vendor.mjs",
+    "build": "tsc",
     "watch": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "check": "npm run format:check && npm run lint && npm run typecheck"
+    "check": "npm run format:check && npm run lint && npm run typecheck",
+    "twitch:auth": "node scripts/twitch-onetime-auth.mjs"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
@@ -25,7 +26,6 @@
     "globals": "17.11.0",
     "prettier": "3.9.6",
     "serve": "14.2.6",
-    "socket.io-client": "2.5.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.67.0"
   }
