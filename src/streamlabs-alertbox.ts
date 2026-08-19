@@ -321,6 +321,11 @@ async function render(startedAt = Date.now()): Promise<void> {
   }
   const stage = new AlertStage(root, { top: TOP_OFFSET, onDone: () => {} });
   stage.show({ ...event, variant }, DURATION);
+  // TEMPORARY: confirms whether a "$" is inside our own rendered DOM or
+  // something else is overlaying it.
+  setTimeout(() => {
+    console.log("[zw] rendered root text", root.textContent);
+  }, 200);
 }
 
 void render();
