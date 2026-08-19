@@ -143,11 +143,10 @@ function buildEvent(
       avatar,
       message,
       headline: "Resub",
-      // TEMPORARY: shows the raw computed values directly on the alert
-      // itself, so there's no ambiguity about which console log matches
-      // which render. Revert to the line below once confirmed.
-      detail: `DEBUG raw=${JSON.stringify(rawMonths)} months=${months} messageTemplate=${JSON.stringify(messageTemplate)}`,
-      // detail: messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
+      // TEMPORARY: zero-width space escape sequences bracketing the
+      // digit, testing whether that breaks whatever external process is
+      // prepending "$" to bare numbers in this widget.
+      detail: `DEBUG months=\u200b${months}\u200b end`,
       amount: String(months),
       tier,
     };
@@ -190,6 +189,7 @@ function buildEvent(
       type: "raid",
       name,
       avatar,
+      message,
       party,
       detail:
         messageTemplate ||

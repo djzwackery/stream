@@ -173,7 +173,7 @@
       "userMessage",
       "messageTemplate",
     ],
-    raid: ["name", "img", "count", "messageTemplate"],
+    raid: ["name", "img", "count", "message", "userMessage", "messageTemplate"],
     tip: ["name", "img", "amount", "message", "userMessage", "messageTemplate"],
   };
   // #root fills the widget's own real size instead of the 1920x1080

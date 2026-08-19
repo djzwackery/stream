@@ -30,6 +30,7 @@ export function Squad({
         padding: `${1.2 * s}rem ${1.7 * s}rem`,
         position: "relative",
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: `${1.8 * s}rem`,
         rotate: "1deg",
@@ -89,6 +90,21 @@ export function Squad({
           `+${e.party! - n}`,
         ),
     ),
+    e.message &&
+      el(
+        "p",
+        {
+          style: {
+            width: "100%",
+            margin: `${0.9 * s}rem 0 0`,
+            fontSize: `${1.35 * s}rem`,
+            color: "var(--white)",
+            maxWidth: "48ch",
+            textWrap: "pretty",
+          },
+        },
+        `“${e.message}”`,
+      ),
     Scanlines(),
   );
 }
