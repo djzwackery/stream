@@ -107,6 +107,12 @@ function buildEvent(
   // otherwise); when set, it's meant to replace the default one-liner
   // below it, that's the whole point of the streamer configuring it.
   const messageTemplate = readRichText("alert-message") || undefined;
+  // TEMPORARY: remove once the resub "$" mystery is confirmed.
+  console.log("[zw] messageTemplate", {
+    boxType,
+    messageTemplate,
+    alertMessageOuterHTML: document.getElementById("alert-message")?.outerHTML,
+  });
 
   if (boxType === "follow") {
     return {
