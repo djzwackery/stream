@@ -38,18 +38,16 @@ function cleanText(raw: string | null | undefined): string {
 }
 
 /**
- * Reads one `[data-token]` span's text from `tokens`' own direct children
- * only (`:scope >`, not a descendant selector), so it can't accidentally
- * match Streamlabs' own reused `data-token` markup nested inside `img`/
- * `messageTemplate`/`userMessage` (see `readRichText`). Scoped to the
- * already-captured `tokens` element rather than a fresh `document`-wide
- * lookup by id, since re-querying by id repeatedly (as `render()`'s polling
- * does) isn't guaranteed to keep resolving to the same node.
+ * Reads one `[data-token]` span's text from `tokens`' own direct children,
+ * stripping non-letters before comparing: Streamlabs has been observed
+ * inserting invisible characters into the attribute that break exact
+ * matching but look identical in a text dump.
  */
 function readToken(tokens: Element, name: string): string {
-  const el = tokens.querySelector<HTMLElement>(
-    `:scope > [data-token="${name}"]`,
-  );
+  const el = Array.from(tokens.children).find(
+    (child) =>
+      (child as HTMLElement).dataset.token?.replace(/[^a-zA-Z]/g, "") === name,
+  ) as HTMLElement | undefined;
   return cleanText(el?.textContent);
 }
 
@@ -75,9 +73,12 @@ function readName(tokens: Element): string {
   if (direct) {
     return direct;
   }
-  const nested = document.querySelector<HTMLElement>(
-    '#alert-message [data-token="name"]',
-  );
+  const alertMessage = document.getElementById("alert-message");
+  const nested = alertMessage
+    ? Array.from(
+        alertMessage.querySelectorAll<HTMLElement>("[data-token]"),
+      ).find((el) => el.dataset.token?.replace(/[^a-zA-Z]/g, "") === "name")
+    : undefined;
   return cleanText(nested?.textContent);
 }
 
