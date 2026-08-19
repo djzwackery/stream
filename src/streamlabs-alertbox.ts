@@ -135,15 +135,19 @@ function buildEvent(
     };
   }
   if (boxType === "resub") {
-    const months = parseAmount(readToken(tokens, "months")) || 1;
+    const rawMonths = readToken(tokens, "months");
+    const months = parseAmount(rawMonths) || 1;
     return {
       type: "sub",
       name,
       avatar,
       message,
       headline: "Resub",
-      detail:
-        messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
+      // TEMPORARY: shows the raw computed values directly on the alert
+      // itself, so there's no ambiguity about which console log matches
+      // which render. Revert to the line below once confirmed.
+      detail: `DEBUG raw=${JSON.stringify(rawMonths)} months=${months} messageTemplate=${JSON.stringify(messageTemplate)}`,
+      // detail: messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
       amount: String(months),
       tier,
     };
