@@ -107,12 +107,6 @@ function buildEvent(
   // otherwise); when set, it's meant to replace the default one-liner
   // below it, that's the whole point of the streamer configuring it.
   const messageTemplate = readRichText("alert-message") || undefined;
-  // TEMPORARY: remove once the resub "$" mystery is confirmed.
-  console.log("[zw] messageTemplate", {
-    boxType,
-    messageTemplate,
-    alertMessageOuterHTML: document.getElementById("alert-message")?.outerHTML,
-  });
 
   if (boxType === "follow") {
     return {
@@ -143,30 +137,34 @@ function buildEvent(
       avatar,
       message,
       headline: "Resub",
-      // TEMPORARY: zero-width space escape sequences bracketing the
-      // digit, testing whether that breaks whatever external process is
-      // prepending "$" to bare numbers in this widget.
-      detail: `DEBUG months=\u200b${months}\u200b end`,
+      detail:
+        messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
       amount: String(months),
       tier,
     };
   }
   if (boxType === "giftsub") {
-    // No explicit anonymous/community flag from Streamlabs, so an absent or
-    // "anonymous" {name} means an anonymous gifter, and {count} above 1
-    // means a community gift rather than one aimed at a specific viewer.
-    const rawName = readToken(tokens, "name");
-    const isAnonymous = !rawName || /^anonymous$/i.test(rawName);
-    const count = parseAmount(readToken(tokens, "count")) || 1;
-    const isCommunity = count > 1;
+    // {gifter} is the one paying, {name} is who receives it (only present
+    // for a single-recipient gift), {amount} is the count (only present for
+    // a community gift): confirmed from Streamlabs' own default templates,
+    // "{gifter} has gifted a sub to {name}" vs.
+    // "{gifter} has gifted {amount} subs to viewers!". An absent {gifter}
+    // means an anonymous gift, either kind.
+    const gifter = readToken(tokens, "gifter");
+    const recipient = readToken(tokens, "name");
+    const isAnonymous = !gifter;
+    const count = parseAmount(readToken(tokens, "amount")) || 1;
+    const isCommunity = count > 1 || !recipient;
     return {
       type: "sub",
-      name: isAnonymous ? "An anonymous gifter" : rawName,
+      name: isAnonymous ? "An anonymous gifter" : gifter,
       avatar: isAnonymous ? undefined : avatar,
       headline: isCommunity ? "Community gift" : "Gifted sub",
-      detail: isCommunity
-        ? `${count} subs gifted to the community`
-        : "gifted a sub",
+      detail:
+        messageTemplate ||
+        (isCommunity
+          ? `${count} subs gifted to the community`
+          : `gifted a sub to ${recipient || "someone"}`),
       amount: isCommunity ? `×${count}` : undefined,
       tier,
     };
@@ -269,11 +267,11 @@ const POLL_INTERVAL_MS = 100;
 
 /**
  * The second token (besides `{name}`) each type's display actually depends
- * on, so `render()` knows to wait for it too.
+ * on, so `render()` knows to wait for it too. giftsub has no single such
+ * token, its ready-check is special-cased in `render()` instead.
  */
 const NUMERIC_TOKEN: Partial<Record<StreamlabsAlertBoxType, string>> = {
   resub: "months",
-  giftsub: "count",
   bits: "amount",
   raid: "count",
   tip: "amount",
@@ -300,14 +298,21 @@ async function render(startedAt = Date.now()): Promise<void> {
   const name = readName(tokens);
   // Only {name} was ever waited on, so a type whose display depends on a
   // second token (party size, months, amount...) could render before that
-  // one had substituted, silently falling back to its own default.
+  // one had substituted, silently falling back to its own default. giftsub
+  // has no single required token, gifter/name/amount are each legitimately
+  // absent depending on condition (anonymous, community), so it's ready
+  // once any one of the three has a value instead of requiring {name}.
   const numericToken = NUMERIC_TOKEN[boxType];
-  const numericReady = !numericToken || readToken(tokens, numericToken) !== "";
-  if ((!name || !numericReady) && Date.now() - startedAt < MAX_WAIT_MS) {
+  const ready =
+    boxType === "giftsub"
+      ? ["gifter", "name", "amount"].some((t) => readToken(tokens, t) !== "")
+      : name !== "" &&
+        (!numericToken || readToken(tokens, numericToken) !== "");
+  if (!ready && Date.now() - startedAt < MAX_WAIT_MS) {
     setTimeout(() => render(startedAt), POLL_INTERVAL_MS);
     return;
   }
-  if (!name || !numericReady) {
+  if (!ready) {
     console.warn(
       "[zw] streamlabs-alertbox.js: token(s) never resolved, using defaults",
       tokens.outerHTML,
@@ -321,11 +326,6 @@ async function render(startedAt = Date.now()): Promise<void> {
   }
   const stage = new AlertStage(root, { top: TOP_OFFSET, onDone: () => {} });
   stage.show({ ...event, variant }, DURATION);
-  // TEMPORARY: confirms whether a "$" is inside our own rendered DOM or
-  // something else is overlaying it.
-  setTimeout(() => {
-    console.log("[zw] rendered root text", root.textContent);
-  }, 200);
 }
 
 void render();

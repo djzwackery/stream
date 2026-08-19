@@ -63,6 +63,17 @@ export function Meter({
             { style: { ...display(s, 2.2), marginTop: `${0.4 * s}rem` } },
             e.name,
           ),
+          el(
+            "div",
+            {
+              style: {
+                ...label(s * 0.85),
+                marginTop: `${0.35 * s}rem`,
+                color: "var(--ink-dim)",
+              },
+            },
+            e.detail || t.verb,
+          ),
         ),
       ),
       el(

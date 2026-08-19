@@ -153,6 +153,8 @@
   // profile_image isn't included: confirmed live it never substitutes,
   // Streamlabs leaves it as the literal "{profile_image}". Streamlabs
   // exposes no subscription tier token at all, for any sub-related type.
+  // giftsub's {name} is the recipient, not the gifter, that's {gifter};
+  // {amount} is the count, only present for a community gift.
   const SL_TOKENS: Record<string, string[]> = {
     follow: ["name", "img", "messageTemplate"],
     sub: ["name", "img", "message", "userMessage", "messageTemplate"],
@@ -164,7 +166,7 @@
       "userMessage",
       "messageTemplate",
     ],
-    giftsub: ["name", "count"],
+    giftsub: ["gifter", "name", "amount", "img", "messageTemplate"],
     bits: [
       "name",
       "img",
@@ -175,6 +177,27 @@
     ],
     raid: ["name", "img", "count", "message", "userMessage", "messageTemplate"],
     tip: ["name", "img", "amount", "message", "userMessage", "messageTemplate"],
+  };
+
+  // The default Message Template text Streamlabs itself prefills per type
+  // (support.streamlabs.com), used to seed the preview field below. tip has
+  // no confirmed default, left blank rather than guessed.
+  const SL_DEFAULT_TEMPLATES: Record<string, string> = {
+    follow: "{name} just followed!",
+    sub: "{name} just subscribed!",
+    resub: "{name} just resubbed for {months} months!",
+    giftsub: "{gifter} has gifted a sub to {name}",
+    bits: "{name} cheered! x{amount}",
+    raid: "{name} is raiding with a party of {count}!",
+  };
+
+  // Which token the preview's generic "Value" field below feeds, per type.
+  const SL_NUMERIC_TOKEN: Record<string, string> = {
+    resub: "months",
+    giftsub: "amount",
+    bits: "amount",
+    raid: "count",
+    tip: "amount",
   };
   // #root fills the widget's own real size instead of the 1920x1080
   // alerts.html always assumes: AlertStage centers relative to #root, and a
@@ -214,31 +237,42 @@
     userMessage: "alert-user-message",
   };
 
+  function escapeHtml(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Without `values`, tokens render as their literal "{token}" placeholder
+  // for Streamlabs to substitute (the copy-paste output). With `values`,
+  // real text goes in instead, for the local preview below to run the real
+  // JS box against, as if Streamlabs had already substituted it.
   function generateStreamlabsHtml(
     type: string,
     tier: string,
     variant: string,
+    values?: Record<string, string>,
   ): string {
     const tokens = SL_TOKENS[type] ?? [];
     const richTokens = tokens.filter((t) => t in SL_RICH_TOKEN_IDS);
     const simpleTokens = tokens.filter((t) => !(t in SL_RICH_TOKEN_IDS));
+    const text = (t: string) =>
+      values ? escapeHtml(values[t] ?? "") : `{${t}}`;
 
     const richBlock = richTokens.length
       ? [
           richTokens.includes("img")
             ? [
                 '<div id="alert-image-wrap">',
-                `  <div id="alert-image" data-token="img">{img}</div>`,
+                `  <div id="alert-image" data-token="img">${text("img")}</div>`,
                 "</div>",
               ].join("\n")
             : "",
           '<div id="alert-text-wrap">',
           '  <div id="alert-text">',
           richTokens.includes("messageTemplate")
-            ? `    <div id="alert-message" data-token="messageTemplate">{messageTemplate}</div>`
+            ? `    <div id="alert-message" data-token="messageTemplate">${text("messageTemplate")}</div>`
             : "",
           richTokens.includes("userMessage")
-            ? `    <div id="alert-user-message" data-token="userMessage">{userMessage}</div>`
+            ? `    <div id="alert-user-message" data-token="userMessage">${text("userMessage")}</div>`
             : "",
           "  </div>",
           "</div>",
@@ -248,7 +282,7 @@
       : "";
 
     const simpleSpans = simpleTokens
-      .map((t) => `    <span data-token="${t}">{${t}}</span>`)
+      .map((t) => `    <span data-token="${t}">${text(t)}</span>`)
       .join("\n");
 
     return [
@@ -286,9 +320,15 @@
     );
     $<HTMLTextAreaElement>("sl-css").value = SL_CSS;
   }
+  function fillSlDefaultTemplate(): void {
+    const type = $<HTMLSelectElement>("sl-type").value;
+    $<HTMLTextAreaElement>("sl-p-template").value =
+      SL_DEFAULT_TEMPLATES[type] ?? "";
+  }
   $<HTMLSelectElement>("sl-type").addEventListener("change", () => {
     fillSlVariants();
     updateStreamlabsCode();
+    fillSlDefaultTemplate();
   });
   $<HTMLSelectElement>("sl-tier").addEventListener(
     "change",
@@ -300,6 +340,7 @@
   );
   fillSlVariants();
   updateStreamlabsCode();
+  fillSlDefaultTemplate();
 
   // Matches the placeholder streamlabs-alertbox.ts ships with (that file's
   // own source is the other place this exact string is defined).
@@ -350,4 +391,73 @@
   $<HTMLButtonElement>("sl-html-copy").onclick = () => copyField("sl-html");
   $<HTMLButtonElement>("sl-css-copy").onclick = () => copyField("sl-css");
   $<HTMLButtonElement>("sl-js-copy").onclick = () => copyField("sl-js");
+
+  // Substitutes {token} inside a Message Template string the same way
+  // Streamlabs does before it ever reaches this file's own script, so the
+  // preview below sees plain resolved text, same as the real widget.
+  function substituteTokens(
+    template: string,
+    values: Record<string, string>,
+  ): string {
+    return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+      key in values ? values[key]! : match,
+    );
+  }
+
+  // No fallback text for name/gifter: leaving either blank tests Streamlabs'
+  // own anonymous-gift/no-recipient conditions, same as a token it never
+  // substituted. The inputs still carry sensible defaults in the HTML for a
+  // first-time, non-empty preview.
+  function buildPreviewValues(type: string): Record<string, string> {
+    const values: Record<string, string> = {
+      name: $<HTMLInputElement>("sl-p-name").value.trim(),
+      gifter: $<HTMLInputElement>("sl-p-gifter").value.trim(),
+      img: randomAvatar(),
+      message: $<HTMLInputElement>("sl-p-message").value.trim(),
+    };
+    values.userMessage = values.message!;
+    const numericKey = SL_NUMERIC_TOKEN[type];
+    if (numericKey) {
+      values[numericKey] =
+        $<HTMLInputElement>("sl-p-value").value.trim() || "1";
+    }
+    const template = $<HTMLTextAreaElement>("sl-p-template").value.trim();
+    if (template) {
+      values.messageTemplate = substituteTokens(template, values);
+    }
+    return values;
+  }
+
+  // Runs the exact JS box against simulated, already-substituted tokens in
+  // a sandboxed iframe, so this shows what Streamlabs will really render
+  // (Message Template included) without ever pasting anything there.
+  function previewStreamlabs(): void {
+    if (!slJsBundle) {
+      console.warn(
+        "[zw] streamlabs-alertbox.bundle.js not loaded yet, try again in a moment",
+      );
+      return;
+    }
+    const type = $<HTMLSelectElement>("sl-type").value;
+    const tier = $<HTMLSelectElement>("sl-tier").value;
+    const variant = $<HTMLSelectElement>("sl-variant").value;
+    const html = generateStreamlabsHtml(
+      type,
+      tier,
+      variant,
+      buildPreviewValues(type),
+    );
+    const safeBundle = slJsBundle.replace(/<\/script/gi, "<\\/script");
+    const doc = [
+      '<!doctype html><html><head><meta charset="utf-8" />',
+      '<link rel="stylesheet" href="styles.css" />',
+      `<style>${SL_CSS}</style>`,
+      "</head><body>",
+      html,
+      `<script>${safeBundle}</script>`,
+      "</body></html>",
+    ].join("\n");
+    $<HTMLIFrameElement>("sl-preview-frame").srcdoc = doc;
+  }
+  $<HTMLButtonElement>("sl-preview-fire").onclick = previewStreamlabs;
 })();

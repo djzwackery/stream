@@ -229,6 +229,33 @@
       <textarea id="sl-js" readonly></textarea>
       <button type="button" id="sl-js-copy">Copy JS</button>
     </div>
+    <h2>Preview</h2>
+    <p>
+      Runs the real JS box above against fake values, Message Template included,
+      so you can see what it'll actually render before pasting anything into
+      Streamlabs.
+    </p>
+    <div class="row">
+      <label>Name<input id="sl-p-name" value="kevin" size="14" /></label>
+      <label
+        >Gifter<input id="sl-p-gifter" value="ravemum74" size="14"
+      /></label>
+      <label>Value<input id="sl-p-value" value="3" size="6" /></label>
+      <label
+        >Message<input id="sl-p-message" value="poggers" size="24"
+      /></label>
+    </div>
+    <div class="row">
+      <label style="flex: 1"
+        >Message Template<textarea id="sl-p-template" rows="2"></textarea>
+      </label>
+    </div>
+    <div class="row">
+      <button data-tone="acid" id="sl-preview-fire">Preview</button>
+    </div>
+    <div class="preview">
+      <iframe id="sl-preview-frame" title="streamlabs preview"></iframe>
+    </div>
     <script src="js/control.js"></script>
   </body>
 </html>
