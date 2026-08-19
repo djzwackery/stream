@@ -123,13 +123,13 @@ function buildEvent(
       name,
       avatar,
       message,
-      detail: messageTemplate || "Tier 1 · 1 month",
+      detail: messageTemplate || "1 month",
       amount: "1",
       tier,
     };
   }
   if (boxType === "resub") {
-    const months = parseAmount(readToken(tokens, "amount")) || 1;
+    const months = parseAmount(readToken(tokens, "months")) || 1;
     return {
       type: "sub",
       name,
@@ -137,8 +137,7 @@ function buildEvent(
       message,
       headline: "Resub",
       detail:
-        messageTemplate ||
-        `Tier 1 · ${months} ${months === 1 ? "month" : "months"}`,
+        messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
       amount: String(months),
       tier,
     };
@@ -263,7 +262,7 @@ const POLL_INTERVAL_MS = 100;
  * on, so `render()` knows to wait for it too.
  */
 const NUMERIC_TOKEN: Partial<Record<StreamlabsAlertBoxType, string>> = {
-  resub: "amount",
+  resub: "months",
   giftsub: "count",
   bits: "amount",
   raid: "count",

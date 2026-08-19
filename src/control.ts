@@ -149,16 +149,17 @@
   }
 
   // Tokens Streamlabs' Alert Box substitutes per alert type (verified
-  // against github.com/neferent/streamlabs-custom-code-starter's real
-  // templates). profile_image isn't included: confirmed live it never
-  // substitutes, Streamlabs leaves it as the literal "{profile_image}".
+  // against support.streamlabs.com's own Message Template Parameters doc).
+  // profile_image isn't included: confirmed live it never substitutes,
+  // Streamlabs leaves it as the literal "{profile_image}". Streamlabs
+  // exposes no subscription tier token at all, for any sub-related type.
   const SL_TOKENS: Record<string, string[]> = {
     follow: ["name", "img", "messageTemplate"],
     sub: ["name", "img", "message", "userMessage", "messageTemplate"],
     resub: [
       "name",
       "img",
-      "amount",
+      "months",
       "message",
       "userMessage",
       "messageTemplate",
