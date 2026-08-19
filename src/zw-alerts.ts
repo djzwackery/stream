@@ -132,15 +132,42 @@ fetch(CFG.rewards, { cache: "no-store" })
   );
 
 /**
- * Normalises anything thrown at it into the shape `AlertStage` renders.
+ * Substitutes Streamlabs-style `{token}` placeholders in a template string,
+ * leaving anything not in `values` untouched (same absent-token handling as
+ * streamlabs-alertbox.ts).
+ */
+function substituteTokens(
+  template: string,
+  values: Record<string, string>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
+    key in values ? values[key]! : match,
+  );
+}
+
+const TOKEN_SHAPE = /\{[a-zA-Z]+\}/;
+
+/**
+ * Normalises anything thrown at it into the shape `AlertStage` renders. A
+ * `message` containing `{token}`-shaped text is treated as a Streamlabs-style
+ * Message Template, substituted and used as the alert's detail line instead
+ * of its type default, so control.html's rehearsal panel previews a custom
+ * template the same way the real Streamlabs Alert Box would; a plain message
+ * (no tokens) keeps its existing role as the quoted comment underneath.
  */
 function build(raw: RawAlertPayload): AlertStageEvent {
   const type = raw.type;
+  const name = raw.name || "someone";
+  const isTemplate = !!raw.message && TOKEN_SHAPE.test(raw.message);
+  const message = isTemplate
+    ? substituteTokens(raw.message!, { name, value: String(raw.value ?? "") })
+    : raw.message;
+  const detail = (fallback: string) => (isTemplate ? message! : fallback);
   const e: AlertStageEvent = {
     type,
-    name: raw.name || "someone",
+    name,
     avatar: raw.avatar,
-    message: raw.message,
+    message,
     goal: raw.goal,
     variant: raw.variant || variantFor(type),
     tier: "small", // overwritten below, or by the redeem branch
@@ -148,25 +175,29 @@ function build(raw: RawAlertPayload): AlertStageEvent {
   if (type === "tip") {
     e.amount =
       raw.amount || `$${raw.value || 0} ${raw.currency || CFG.currency}`;
-    e.detail = "chucked in";
+    e.detail = detail("chucked in");
     e.fill = raw.fill;
   } else if (type === "bits") {
     e.amount = raw.amount || `${fmt(raw.value || 0)} bits`;
-    e.detail = "cheered";
+    e.detail = detail("cheered");
     e.fill = raw.fill ?? Math.min(1, (raw.value || 0) / CFG.bitsHuge);
   } else if (type === "raid") {
     e.party = raw.value || raw.party || 1;
     e.party_avatars = raw.party_avatars;
-    e.detail = `${e.party} ${e.party === 1 ? "mate in tow" : "mates in tow"}`;
+    e.detail = detail(
+      `${e.party} ${e.party === 1 ? "mate in tow" : "mates in tow"}`,
+    );
     e.amount = String(e.party);
     e.headline = "Incoming raid";
   } else if (type === "sub") {
     if (raw.gifted) {
-      e.detail = `${raw.gifted} subs gifted`;
+      e.detail = detail(`${raw.gifted} subs gifted`);
       e.amount = `×${raw.gifted}`;
       e.headline = "Gifted";
     } else {
-      e.detail = `Tier ${raw.plan || 1} · ${raw.value || 1} ${raw.value === 1 ? "month" : "months"}`;
+      e.detail = detail(
+        `Tier ${raw.plan || 1} · ${raw.value || 1} ${raw.value === 1 ? "month" : "months"}`,
+      );
       e.amount = String(raw.value || 1);
     }
   } else if (type === "redeem") {
@@ -182,7 +213,7 @@ function build(raw: RawAlertPayload): AlertStageEvent {
     e.tier = raw.tier || cfg.tier || "big";
     return e;
   } else {
-    e.detail = "just followed";
+    e.detail = detail("just followed");
   }
   e.tier = tierFor(type, raw);
   if (raw.headline) {

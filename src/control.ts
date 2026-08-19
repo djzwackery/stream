@@ -381,6 +381,7 @@
     .then((js) => {
       slJsBundle = js;
       renderSlJs();
+      previewStreamlabs();
     })
     .catch(() =>
       console.warn(
@@ -460,4 +461,26 @@
     $<HTMLIFrameElement>("sl-preview-frame").srcdoc = doc;
   }
   $<HTMLButtonElement>("sl-preview-fire").onclick = previewStreamlabs;
+
+  // Mirrors the fields live, same as Streamlabs substituting a token the
+  // moment you save it: no separate "apply" step to remember. Debounced so
+  // fast typing doesn't restart the alert's animation on every keystroke.
+  let previewDebounce: ReturnType<typeof setTimeout> | undefined;
+  function schedulePreview(): void {
+    clearTimeout(previewDebounce);
+    previewDebounce = setTimeout(previewStreamlabs, 400);
+  }
+  [
+    "sl-p-name",
+    "sl-p-gifter",
+    "sl-p-value",
+    "sl-p-message",
+    "sl-p-template",
+  ].forEach((id) => $(id).addEventListener("input", schedulePreview));
+  $<HTMLSelectElement>("sl-type").addEventListener("change", schedulePreview);
+  $<HTMLSelectElement>("sl-tier").addEventListener("change", schedulePreview);
+  $<HTMLSelectElement>("sl-variant").addEventListener(
+    "change",
+    schedulePreview,
+  );
 })();
