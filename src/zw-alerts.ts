@@ -194,6 +194,9 @@ function build(raw: RawAlertPayload): AlertStageEvent {
       e.detail = detail(`${raw.gifted} subs gifted`);
       e.amount = `×${raw.gifted}`;
       e.headline = "Gifted";
+      // A deeper shade of sub's magenta, not a whole new tone: the four
+      // brand tones are all already claimed by other alert types.
+      e.tone = "--magenta-contrast";
     } else {
       e.detail = detail(
         `Tier ${raw.plan || 1} · ${raw.value || 1} ${raw.value === 1 ? "month" : "months"}`,

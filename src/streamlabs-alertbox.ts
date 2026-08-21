@@ -174,6 +174,10 @@ function buildEvent(
           : `gifted a sub to ${recipient || "someone"}`),
       amount: isCommunity ? `×${count}` : undefined,
       tier,
+      // A gifted sub is a distinct enough moment to earn its own accent, a
+      // deeper shade of sub's magenta rather than regular subs' brighter
+      // one: the four brand tones are all already claimed by other types.
+      tone: "--magenta-contrast",
     };
   }
   if (boxType === "bits") {
