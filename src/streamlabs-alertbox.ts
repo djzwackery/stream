@@ -97,10 +97,12 @@ function readName(tokens: Element): string {
 
 /**
  * Reads `#alert-image` defensively: an uploaded Image Gallery pick could
- * arrive as plain text (the original assumption, still tried last), an
- * `<img>` Streamlabs substituted in directly or nested inside, or a CSS
- * `background-image`, since which one it actually uses hasn't been pinned
- * down from a real widget yet.
+ * arrive as plain text (the original assumption, still tried last) or as an
+ * `<img>` Streamlabs substituted in directly or nested inside, since which
+ * one it actually uses hasn't been pinned down from a real widget yet. No
+ * `background-image` fallback: that produced a real 404 on a live tip
+ * widget, almost certainly Streamlabs' own CSS setting one on this id for
+ * something unrelated to the donation image, picked up as if it were one.
  */
 function readAvatar(): string | undefined {
   const el = document.getElementById("alert-image");
@@ -111,13 +113,7 @@ function readAvatar(): string | undefined {
   if (img?.getAttribute("src")) {
     return img.src;
   }
-  const text = cleanText(el.textContent);
-  if (text) {
-    return text;
-  }
-  const bg = getComputedStyle(el).backgroundImage;
-  const match = /url\(["']?([^"')]+)["']?\)/.exec(bg);
-  return match?.[1] || undefined;
+  return cleanText(el.textContent) || undefined;
 }
 
 function parseAmount(raw: string): number {
@@ -358,7 +354,7 @@ async function waitForTokensToStabilize(tokens: Element): Promise<void> {
     ["name", "gifter", "count", "months", "amount", "message"]
       .map((t) => readToken(tokens, t))
       .concat([
-        readRichText("alert-image"),
+        readAvatar() ?? "",
         readRichText("alert-user-message"),
         readRichText("alert-message"),
       ])
