@@ -101,6 +101,18 @@ function readName(tokens: Element): string {
 }
 
 /**
+ * A "Send Test Alert" was confirmed (debug overlay screenshot on a real
+ * widget) to inject a hidden 1px `<img>` inside `#alert-image` pointing at
+ * `streamlabs.com/widgets/frame/alertbox/custom?type=preview`, the widget's
+ * own frame URL, not an image, tracking-pixel-style scaffolding unrelated
+ * to any `{img}` substitution. Excluded so it's never mistaken for a real
+ * uploaded avatar.
+ */
+function isStreamlabsOwnMarkup(src: string): boolean {
+  return /streamlabs\.com\/widgets\//.test(src);
+}
+
+/**
  * Reads `#alert-image` defensively: an uploaded Image Gallery pick could
  * arrive as plain text (the original assumption, still tried last) or as an
  * `<img>` Streamlabs substituted in directly or nested inside, since which
@@ -115,10 +127,14 @@ function readAvatar(): string | undefined {
     return undefined;
   }
   const img = el instanceof HTMLImageElement ? el : el.querySelector("img");
-  if (img?.getAttribute("src")) {
-    return img.src;
+  if (img) {
+    const src = img.getAttribute("src");
+    if (src && !isStreamlabsOwnMarkup(src)) {
+      return img.src;
+    }
   }
-  return cleanText(el.textContent) || undefined;
+  const text = cleanText(el.textContent);
+  return text && !isStreamlabsOwnMarkup(text) ? text : undefined;
 }
 
 function parseAmount(raw: string): number {
