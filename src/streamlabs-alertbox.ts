@@ -21,7 +21,7 @@ const TOP_OFFSET = 96;
 // widget is its own independently-pasted copy (see the file header), so
 // "still broken" often just means this specific one wasn't re-copied after
 // a fix landed here.
-const BUILD_MARKER = "2026-08-19a";
+const BUILD_MARKER = "2026-08-21a";
 
 /**
  * The seven per-type Alert Box boxes Streamlabs exposes; `resub` and
@@ -209,13 +209,17 @@ function buildEvent(
       tier,
     };
   }
-  const amount = parseAmount(readToken(tokens, "amount"));
+  // Streamlabs sends this already formatted for the donation's actual
+  // currency (e.g. "A$97", not "$97"), so it's shown as-is rather than
+  // reparsed into a bare number and given our own generic "$" prefix,
+  // which silently dropped the streamer's real currency symbol.
+  const amount = readToken(tokens, "amount");
   return {
     type: "tip",
     name,
     avatar,
     message,
-    amount: `$${amount}`,
+    amount: amount || undefined,
     detail: messageTemplate || "chucked in",
     tier,
   };
@@ -309,19 +313,29 @@ const POLL_INTERVAL_MS = 100;
 const MESSAGE_STABILIZE_MS = 500;
 
 /**
- * `#alert-message` wraps each interpolated token in its own `<span>` for a
- * letter-reveal animation, unlike the plain `{name}`/numeric tokens the
- * ready-check above waits for, so it can still be mid-construction (or
- * simply not yet started) even once those are already substituted, DevTools
- * inspection on a real widget confirmed. Waits, polling every
- * `POLL_INTERVAL_MS`, until two consecutive reads of its text match (stopped
+ * Streamlabs doesn't necessarily substitute a token once and leave it: a
+ * debug-overlay screenshot on a real widget showed a tip's `{amount}`
+ * settle from an interim `$A$97` to a final `A$97`, the same kind of
+ * staged self-correction `#alert-message` does while it wraps each
+ * interpolated token in its own `<span>` for a letter-reveal animation.
+ * `render()`'s own ready-check only waits for these to become non-empty,
+ * not for them to stop changing, so `buildEvent()` could still read a
+ * transient value. Waits, polling every `POLL_INTERVAL_MS`, until two
+ * consecutive reads of everything `buildEvent()` touches match (stopped
  * changing) or `MESSAGE_STABILIZE_MS` runs out, whichever comes first: a
- * widget with no custom Message Template configured exits on the very first
- * check, since it never changes at all.
+ * token that was never touched at all (nothing to correct) exits on the
+ * very first check, since it never changes.
  */
-async function waitForMessageTemplateToStabilize(): Promise<void> {
+async function waitForTokensToStabilize(tokens: Element): Promise<void> {
   const read = () =>
-    document.getElementById("alert-message")?.textContent ?? "";
+    ["name", "gifter", "count", "months", "amount", "message"]
+      .map((t) => readToken(tokens, t))
+      .concat([
+        readRichText("alert-image"),
+        readRichText("alert-user-message"),
+        readRichText("alert-message"),
+      ])
+      .join("|");
   let last = read();
   const deadline = Date.now() + MESSAGE_STABILIZE_MS;
   while (Date.now() < deadline) {
@@ -387,7 +401,7 @@ async function render(startedAt = Date.now()): Promise<void> {
       tokens.outerHTML,
     );
   }
-  await waitForMessageTemplateToStabilize();
+  await waitForTokensToStabilize(tokens);
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
   const variant = tokens.dataset.variant || undefined;
   const event = buildEvent(tokens, boxType, tier);
