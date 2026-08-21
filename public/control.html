@@ -187,7 +187,9 @@
       "CSS", JS → "JS" (all three, its JS box can't run a
       <code>&lt;script&gt;</code> tag). Enter the API token once below, it's
       baked into the JS box for you and remembered on this browser. Set that
-      widget's own condition in Streamlabs.
+      widget's own condition in Streamlabs. Check "Debug overlay" before copying
+      to bake a small on-screen readout into that specific widget, no devtools
+      needed, just screenshot it and send it over.
     </p>
     <div class="row">
       <label
@@ -216,6 +218,13 @@
           size="24"
           placeholder="paste once"
       /></label>
+      <label style="flex-direction: row; align-items: center; gap: 0.4rem"
+        ><input
+          type="checkbox"
+          id="sl-debug"
+          style="width: auto; padding: 0"
+        />Debug overlay in generated code</label
+      >
     </div>
     <div class="row">
       <textarea id="sl-html" readonly></textarea>

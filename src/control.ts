@@ -250,6 +250,7 @@
     tier: string,
     variant: string,
     values?: Record<string, string>,
+    debug?: boolean,
   ): string {
     const tokens = SL_TOKENS[type] ?? [];
     const richTokens = tokens.filter((t) => t in SL_RICH_TOKEN_IDS);
@@ -288,7 +289,7 @@
     return [
       '<link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />',
       richBlock,
-      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}" hidden>`,
+      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}"${debug ? ' data-debug="1"' : ""} hidden>`,
       simpleSpans,
       "</div>",
       '<div id="root"></div>',
@@ -313,10 +314,13 @@
     const type = $<HTMLSelectElement>("sl-type").value;
     const tier = $<HTMLSelectElement>("sl-tier").value;
     const variant = $<HTMLSelectElement>("sl-variant").value;
+    const debug = $<HTMLInputElement>("sl-debug").checked;
     $<HTMLTextAreaElement>("sl-html").value = generateStreamlabsHtml(
       type,
       tier,
       variant,
+      undefined,
+      debug,
     );
     $<HTMLTextAreaElement>("sl-css").value = SL_CSS;
   }
@@ -335,6 +339,10 @@
     updateStreamlabsCode,
   );
   $<HTMLSelectElement>("sl-variant").addEventListener(
+    "change",
+    updateStreamlabsCode,
+  );
+  $<HTMLInputElement>("sl-debug").addEventListener(
     "change",
     updateStreamlabsCode,
   );
@@ -447,6 +455,7 @@
       tier,
       variant,
       buildPreviewValues(type),
+      true,
     );
     const safeBundle = slJsBundle.replace(/<\/script/gi, "<\\/script");
     const doc = [

@@ -16,6 +16,13 @@ import { AlertStage } from "./components/AlertStage.js";
 const DURATION = 5000;
 const TOP_OFFSET = 96;
 
+// Bumped whenever this file changes materially, so a debug overlay
+// screenshot can tell a stale Streamlabs paste apart from a real bug: every
+// widget is its own independently-pasted copy (see the file header), so
+// "still broken" often just means this specific one wasn't re-copied after
+// a fix landed here.
+const BUILD_MARKER = "2026-08-19a";
+
 /**
  * The seven per-type Alert Box boxes Streamlabs exposes; `resub` and
  * `giftsub` both map to this repo's single `sub` `AlertType`.
@@ -262,8 +269,65 @@ async function fetchTwitchAvatar(login: string): Promise<string | undefined> {
   }
 }
 
+/**
+ * On-screen `key: value` readout, opt in per widget via `data-debug="1"` on
+ * `#zw-tokens` (control.html's Streamlabs section has a checkbox for it).
+ * Exists because whoever pastes this into Streamlabs can't open devtools to
+ * read a console log, so anything worth diagnosing has to be visible in a
+ * screenshot instead.
+ */
+function renderDebugOverlay(info: Record<string, string>): void {
+  const box = document.createElement("div");
+  box.id = "zw-debug";
+  box.style.cssText = [
+    "position:fixed",
+    "left:8px",
+    "bottom:8px",
+    "z-index:99999",
+    "background:rgba(0,0,0,.85)",
+    "color:#3f3",
+    "font:11px/1.5 ui-monospace,monospace",
+    "padding:8px 10px",
+    "max-width:600px",
+    "white-space:pre-wrap",
+    "word-break:break-word",
+    "pointer-events:none",
+  ].join(";");
+  box.textContent = Object.entries(info)
+    .map(([k, v]) => `${k}: ${v || "(empty)"}`)
+    .join("\n");
+  document.body.appendChild(box);
+}
+
 const MAX_WAIT_MS = 3000;
 const POLL_INTERVAL_MS = 100;
+const MESSAGE_STABILIZE_MS = 500;
+
+/**
+ * `#alert-message` wraps each interpolated token in its own `<span>` for a
+ * letter-reveal animation, unlike the plain `{name}`/numeric tokens the
+ * ready-check above waits for, so it can still be mid-construction (or
+ * simply not yet started) even once those are already substituted, DevTools
+ * inspection on a real widget confirmed. Waits, polling every
+ * `POLL_INTERVAL_MS`, until two consecutive reads of its text match (stopped
+ * changing) or `MESSAGE_STABILIZE_MS` runs out, whichever comes first: a
+ * widget with no custom Message Template configured exits on the very first
+ * check, since it never changes at all.
+ */
+async function waitForMessageTemplateToStabilize(): Promise<void> {
+  const read = () =>
+    document.getElementById("alert-message")?.textContent ?? "";
+  let last = read();
+  const deadline = Date.now() + MESSAGE_STABILIZE_MS;
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    const current = read();
+    if (current === last) {
+      return;
+    }
+    last = current;
+  }
+}
 
 /**
  * The second token (besides `{name}`) each type's display actually depends
@@ -318,6 +382,7 @@ async function render(startedAt = Date.now()): Promise<void> {
       tokens.outerHTML,
     );
   }
+  await waitForMessageTemplateToStabilize();
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
   const variant = tokens.dataset.variant || undefined;
   const event = buildEvent(tokens, boxType, tier);
@@ -326,6 +391,28 @@ async function render(startedAt = Date.now()): Promise<void> {
   }
   const stage = new AlertStage(root, { top: TOP_OFFSET, onDone: () => {} });
   stage.show({ ...event, variant }, DURATION);
+
+  if (tokens.dataset.debug === "1") {
+    renderDebugOverlay({
+      build: BUILD_MARKER,
+      boxType,
+      tier,
+      variant: variant || "(default)",
+      "raw count": readToken(tokens, "count"),
+      "raw months": readToken(tokens, "months"),
+      "raw amount": readToken(tokens, "amount"),
+      "raw gifter": readToken(tokens, "gifter"),
+      "raw message": readToken(tokens, "message"),
+      "raw userMessage": readRichText("alert-user-message"),
+      "raw messageTemplate": readRichText("alert-message"),
+      "event.name": event.name,
+      "event.detail": event.detail ?? "",
+      "event.message": event.message ?? "",
+      "event.amount": event.amount ?? "",
+      "event.party": String(event.party ?? ""),
+      "event.avatar": event.avatar ? "yes" : "no (placeholder shown)",
+    });
+  }
 }
 
 void render();
