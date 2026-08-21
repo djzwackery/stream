@@ -22,6 +22,11 @@ import { AlertStage } from "./components/AlertStage.js";
 const DEFAULT_DURATION_MS = 5000;
 const TOP_OFFSET = 96;
 
+// Matches zw-alerts.ts's own default tipHuge threshold: a tip at or above
+// this fills the jar's segmented meter completely, same proportional scale
+// bits already gets. Tier itself still comes from data-tier, not this.
+const TIP_HUGE_THRESHOLD = 100;
+
 // Bumped whenever this file changes materially, so a debug overlay
 // screenshot can tell a stale Streamlabs paste apart from a real bug: every
 // widget is its own independently-pasted copy (see the file header), so
@@ -243,6 +248,10 @@ function buildEvent(
     avatar,
     message,
     amount: amount || undefined,
+    // Parsed separately from the displayed amount above: that one stays as
+    // Streamlabs sent it (currency symbol included), this just needs a bare
+    // number to scale the jar's fill against.
+    fill: Math.min(1, parseAmount(amount) / TIP_HUGE_THRESHOLD),
     detail: messageTemplate || "chucked in",
     tier,
   };
@@ -458,6 +467,7 @@ async function render(startedAt = Date.now()): Promise<void> {
       "event.detail": event.detail ?? "",
       "event.message": event.message ?? "",
       "event.amount": event.amount ?? "",
+      "event.fill": String(event.fill ?? ""),
       "event.party": String(event.party ?? ""),
       "event.avatar": event.avatar || "no (placeholder shown)",
     });

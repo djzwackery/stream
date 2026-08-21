@@ -176,7 +176,7 @@ function build(raw: RawAlertPayload): AlertStageEvent {
     e.amount =
       raw.amount || `$${raw.value || 0} ${raw.currency || CFG.currency}`;
     e.detail = detail("chucked in");
-    e.fill = raw.fill;
+    e.fill = raw.fill ?? Math.min(1, (raw.value || 0) / CFG.tipHuge);
   } else if (type === "bits") {
     e.amount = raw.amount || `${fmt(raw.value || 0)} bits`;
     e.detail = detail("cheered");
