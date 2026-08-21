@@ -166,7 +166,15 @@
       "userMessage",
       "messageTemplate",
     ],
-    giftsub: ["gifter", "name", "amount", "img", "messageTemplate"],
+    giftsub: [
+      "gifter",
+      "name",
+      "amount",
+      "img",
+      "message",
+      "userMessage",
+      "messageTemplate",
+    ],
     bits: [
       "name",
       "img",

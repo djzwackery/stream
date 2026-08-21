@@ -57,5 +57,19 @@ export function GlitchName({
       },
       e.detail || t.verb,
     ),
+    e.message &&
+      el(
+        "p",
+        {
+          style: {
+            margin: `${0.7 * s}rem auto 0`,
+            fontSize: `${1.2 * s}rem`,
+            color: "var(--white)",
+            maxWidth: "40ch",
+            textWrap: "pretty",
+          },
+        },
+        `“${e.message}”`,
+      ),
   );
 }

@@ -14,6 +14,7 @@ export function Strip({ e, s, tone, t }: LayoutProps): HTMLElement {
     e.name,
     t.verb.toUpperCase(),
     (e.detail || t.eyebrow).toUpperCase(),
+    e.message && `“${e.message.toUpperCase()}”`,
   ].filter(Boolean);
   const run = Array.from({ length: 6 }, () => words).flat();
   return el(

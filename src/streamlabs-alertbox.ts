@@ -166,6 +166,7 @@ function buildEvent(
       type: "sub",
       name: isAnonymous ? "An anonymous gifter" : gifter,
       avatar: isAnonymous ? undefined : avatar,
+      message,
       headline: isCommunity ? "Community gift" : "Gifted sub",
       detail:
         messageTemplate ||

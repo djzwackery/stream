@@ -23,6 +23,7 @@ export function Sticker({
       style: {
         ...panel(tone, s),
         display: "flex",
+        flexWrap: "wrap",
         alignItems: "center",
         gap: `${1.4 * s}rem`,
         padding: `${1.2 * s}rem ${1.8 * s}rem`,
@@ -47,6 +48,20 @@ export function Sticker({
         e.detail || t.verb,
       ),
     ),
+    e.message &&
+      el(
+        "p",
+        {
+          style: {
+            width: "100%",
+            margin: 0,
+            fontSize: `${1.2 * s}rem`,
+            maxWidth: "42ch",
+            textWrap: "pretty",
+          },
+        },
+        `“${e.message}”`,
+      ),
     Scanlines(),
   );
 }
