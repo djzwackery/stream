@@ -259,6 +259,7 @@
     variant: string,
     values?: Record<string, string>,
     debug?: boolean,
+    durationSeconds?: string,
   ): string {
     const tokens = SL_TOKENS[type] ?? [];
     const richTokens = tokens.filter((t) => t in SL_RICH_TOKEN_IDS);
@@ -297,7 +298,7 @@
     return [
       '<link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />',
       richBlock,
-      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}"${debug ? ' data-debug="1"' : ""} hidden>`,
+      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}"${durationSeconds ? ` data-duration="${durationSeconds}"` : ""}${debug ? ' data-debug="1"' : ""} hidden>`,
       simpleSpans,
       "</div>",
       '<div id="root"></div>',
@@ -323,12 +324,14 @@
     const tier = $<HTMLSelectElement>("sl-tier").value;
     const variant = $<HTMLSelectElement>("sl-variant").value;
     const debug = $<HTMLInputElement>("sl-debug").checked;
+    const duration = $<HTMLInputElement>("sl-duration").value.trim();
     $<HTMLTextAreaElement>("sl-html").value = generateStreamlabsHtml(
       type,
       tier,
       variant,
       undefined,
       debug,
+      duration,
     );
     $<HTMLTextAreaElement>("sl-css").value = SL_CSS;
   }
@@ -352,6 +355,10 @@
   );
   $<HTMLInputElement>("sl-debug").addEventListener(
     "change",
+    updateStreamlabsCode,
+  );
+  $<HTMLInputElement>("sl-duration").addEventListener(
+    "input",
     updateStreamlabsCode,
   );
   fillSlVariants();
@@ -464,6 +471,7 @@
       variant,
       buildPreviewValues(type),
       true,
+      $<HTMLInputElement>("sl-duration").value.trim(),
     );
     const safeBundle = slJsBundle.replace(/<\/script/gi, "<\\/script");
     const doc = [
@@ -493,6 +501,7 @@
     "sl-p-value",
     "sl-p-message",
     "sl-p-template",
+    "sl-duration",
   ].forEach((id) => $(id).addEventListener("input", schedulePreview));
   $<HTMLSelectElement>("sl-type").addEventListener("change", schedulePreview);
   $<HTMLSelectElement>("sl-tier").addEventListener("change", schedulePreview);

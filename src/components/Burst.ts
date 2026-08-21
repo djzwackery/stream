@@ -105,7 +105,7 @@ export function Burst({
           "--dx": `${p.dx}px`,
           "--dy": `${p.dy}px`,
           "--dr": p.dr,
-          animation: `${mode === "fall" ? "zwa-fall 2.4s linear" : "zwa-pop 1.1s cubic-bezier(0.2,0.8,0.3,1)"} ${p.delay}s both`,
+          animation: `${mode === "fall" ? "zwa-fall 2.4s cubic-bezier(0.4,0,1,1)" : "zwa-pop 1.1s cubic-bezier(0.2,0.8,0.3,1)"} ${p.delay}s both`,
         },
       }),
     ),
