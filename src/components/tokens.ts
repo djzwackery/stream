@@ -217,7 +217,7 @@ export const MOTION: Record<string, [string, string]> = {
   ],
   stutter: [
     "zwa-stutter-in 0.55s steps(5, end) both",
-    "zwa-stutter-out 0.4s steps(4, end) both",
+    "zwa-stutter-out 0.4s cubic-bezier(0.4,0,1,1) both",
   ],
   glitch: [
     "zwa-glitch-in 0.55s steps(6, end) both",
