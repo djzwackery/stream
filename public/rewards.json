@@ -1,11 +1,11 @@
 {
-  "Attempt anime save": {
+  "Attempt Anime Save": {
     "media": "media/attempt-anime-save.gif",
     "cost": 25000,
     "tier": "huge",
     "variant": "sidecar",
     "tone": "--magenta",
-    "headline": "Anime save"
+    "headline": "Anime Save"
   },
   "Hydrate!": {
     "media": "media/hydrate-the-dj.gif",
