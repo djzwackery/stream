@@ -21,7 +21,7 @@ import { VARIANTS } from "./variants.js";
  * scale, tucked into the corner below, and never take the full-bleed
  * takeover treatment, regardless of tier.
  */
-const REDEEM_SCALE = 0.62;
+const REDEEM_SCALE = 0.8;
 
 /**
  * Left and bottom inset, in pixels, for the redeem corner anchor.
