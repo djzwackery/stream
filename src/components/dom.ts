@@ -32,6 +32,11 @@ export interface ElOptions {
    * Image alt text, for `<img>` elements; defaults to "".
    */
   alt?: string;
+  /**
+   * Called if an `<img>`'s `src` fails to load (a 404, a dead host, ...), so
+   * a caller can swap in a placeholder instead of leaving a broken-image icon.
+   */
+  onError?: () => void;
 }
 
 /**
@@ -90,6 +95,9 @@ export function el(
   }
   if (tag === "img") {
     (node as HTMLImageElement).alt = options?.alt ?? "";
+  }
+  if (options?.onError) {
+    node.addEventListener("error", options.onError);
   }
   for (const child of children) {
     if (child === false || child === null || child === undefined) {

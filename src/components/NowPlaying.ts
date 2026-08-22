@@ -138,47 +138,57 @@ export class NowPlayingCard {
       ? `${8 * this.scale}px ${8 * this.scale}px 0 var(--acid)`
       : "var(--shadow-hard)";
 
-    const artEl = el(
-      "div",
-      {
-        style: {
-          width: art,
-          height: art,
-          flexShrink: 0,
-          border: `${4 * this.scale}px solid var(--white)`,
-          boxShadow: `${7 * this.scale}px ${7 * this.scale}px 0 var(--magenta)`,
-          background: "var(--void-3)",
-          overflow: "hidden",
-          display: "grid",
-          placeItems: "center",
-          animation: m.art,
-          backgroundImage: track.artwork
-            ? undefined
-            : "radial-gradient(color-mix(in oklch, var(--acid) 14%, transparent) 1px, transparent 1px)",
-          backgroundSize: track.artwork
-            ? undefined
-            : `${13 * this.scale}px ${13 * this.scale}px`,
-        },
+    const artEl = el("div", {
+      style: {
+        width: art,
+        height: art,
+        flexShrink: 0,
+        border: `${4 * this.scale}px solid var(--white)`,
+        boxShadow: `${7 * this.scale}px ${7 * this.scale}px 0 var(--magenta)`,
+        background: "var(--void-3)",
+        overflow: "hidden",
+        display: "grid",
+        placeItems: "center",
+        animation: m.art,
       },
-      track.artwork
-        ? el("img", {
-            src: track.artwork,
-            style: { width: "100%", height: "100%", objectFit: "cover" },
-          })
-        : el(
-            "span",
-            {
-              ariaHidden: true,
-              style: {
-                color: "var(--magenta)",
-                fontSize: art * 0.42,
-                lineHeight: 1,
-                textShadow: `${3 * this.scale}px ${3 * this.scale}px 0 var(--void)`,
-              },
+    });
+
+    // Also the fallback if `track.artwork` 404s or otherwise fails to load,
+    // not just when there's no artwork URL at all: the browser already
+    // tried and failed, no point leaving a broken-image icon up there.
+    const showArtPlaceholder = () => {
+      Object.assign(artEl.style, {
+        backgroundImage:
+          "radial-gradient(color-mix(in oklch, var(--acid) 14%, transparent) 1px, transparent 1px)",
+        backgroundSize: `${13 * this.scale}px ${13 * this.scale}px`,
+      });
+      artEl.replaceChildren(
+        el(
+          "span",
+          {
+            ariaHidden: true,
+            style: {
+              color: "var(--magenta)",
+              fontSize: art * 0.42,
+              lineHeight: 1,
+              textShadow: `${3 * this.scale}px ${3 * this.scale}px 0 var(--void)`,
             },
-            "◆",
-          ),
-    );
+          },
+          "◆",
+        ),
+      );
+    };
+    if (track.artwork) {
+      artEl.append(
+        el("img", {
+          src: track.artwork,
+          onError: showArtPlaceholder,
+          style: { width: "100%", height: "100%", objectFit: "cover" },
+        }),
+      );
+    } else {
+      showArtPlaceholder();
+    }
 
     const eyebrowEl = el(
       "span",

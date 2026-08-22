@@ -347,6 +347,32 @@ async function fetchTwitchAvatar(login: string): Promise<string | undefined> {
   }
 }
 
+const AVATAR_PRELOAD_TIMEOUT_MS = 1200;
+
+/**
+ * Confirms a Twitch avatar URL actually loads before committing to it, not
+ * just that the Worker's lookup found one: a cached URL (up to a day old,
+ * see worker/src/twitch.ts) can 404 once Twitch rotates it. A failure here
+ * falls through to whatever Streamlabs put in {img} instead of a
+ * broken-image icon, same spirit as `Avatar`'s own `onerror` fallback, but
+ * this needs an answer before `event.avatar` is chosen, not after render.
+ */
+function imageLoads(url: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const timeout = setTimeout(() => resolve(false), AVATAR_PRELOAD_TIMEOUT_MS);
+    img.onload = () => {
+      clearTimeout(timeout);
+      resolve(true);
+    };
+    img.onerror = () => {
+      clearTimeout(timeout);
+      resolve(false);
+    };
+    img.src = url;
+  });
+}
+
 /**
  * On-screen `key: value` readout, opt in per widget via `data-debug="1"` on
  * `#zw-tokens` (control.html's Streamlabs section has a checkbox for it).
@@ -495,7 +521,11 @@ async function render(startedAt = Date.now()): Promise<void> {
   // recipient's real avatar under an alert claiming anonymity.
   const streamlabsImage = event.avatar;
   if (event.name) {
-    event.avatar = await fetchTwitchAvatar(event.name);
+    const twitchAvatar = await fetchTwitchAvatar(event.name);
+    event.avatar =
+      twitchAvatar && (await imageLoads(twitchAvatar))
+        ? twitchAvatar
+        : undefined;
   }
   if (!event.avatar) {
     event.avatar = streamlabsImage;

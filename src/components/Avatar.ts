@@ -30,6 +30,22 @@ function personPlaceholder(): HTMLElement {
 /**
  * Builds an `Avatar` element.
  */
+function diamondPlaceholder(size: number): HTMLElement {
+  return el(
+    "span",
+    {
+      ariaHidden: true,
+      style: {
+        color: "var(--magenta)",
+        fontSize: size * 0.44,
+        lineHeight: 1,
+        textShadow: `3px 3px 0 var(--void)`,
+      },
+    },
+    "◆",
+  );
+}
+
 export function Avatar({
   src,
   size,
@@ -37,51 +53,52 @@ export function Avatar({
   s = 1,
   placeholder = "diamond",
 }: AvatarProps): HTMLElement {
-  return el(
-    "span",
-    {
-      style: {
-        width: size,
-        height: size,
-        flexShrink: 0,
-        display: "grid",
-        placeItems: "center",
-        background: "var(--void-3)",
-        border: `${Math.round(4 * s)}px solid var(${ring})`,
-        boxShadow: `${7 * s}px ${7 * s}px 0 var(--void)`,
-        overflow: "hidden",
-        backgroundImage:
-          src || placeholder === "person"
-            ? undefined
-            : "radial-gradient(color-mix(in oklch, var(--acid) 16%, transparent) 1px, transparent 1px)",
-        backgroundSize:
-          src || placeholder === "person" ? undefined : "13px 13px",
-      },
+  const wrap = el("span", {
+    style: {
+      width: size,
+      height: size,
+      flexShrink: 0,
+      display: "grid",
+      placeItems: "center",
+      background: "var(--void-3)",
+      border: `${Math.round(4 * s)}px solid var(${ring})`,
+      boxShadow: `${7 * s}px ${7 * s}px 0 var(--void)`,
+      overflow: "hidden",
     },
-    src
-      ? el("img", {
-          src,
-          style: {
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            display: "block",
-          },
-        })
-      : placeholder === "person"
-        ? personPlaceholder()
-        : el(
-            "span",
-            {
-              ariaHidden: true,
-              style: {
-                color: "var(--magenta)",
-                fontSize: size * 0.44,
-                lineHeight: 1,
-                textShadow: `3px 3px 0 var(--void)`,
-              },
-            },
-            "◆",
-          ),
-  );
+  });
+
+  // Also the fallback if `src` 404s or otherwise fails to load, not just
+  // when it's absent to begin with: the browser already tried and failed,
+  // no point leaving a broken-image icon up in its place.
+  function showPlaceholder(): void {
+    Object.assign(wrap.style, {
+      backgroundImage:
+        placeholder === "person"
+          ? ""
+          : "radial-gradient(color-mix(in oklch, var(--acid) 16%, transparent) 1px, transparent 1px)",
+      backgroundSize: placeholder === "person" ? "" : "13px 13px",
+    });
+    wrap.replaceChildren(
+      placeholder === "person" ? personPlaceholder() : diamondPlaceholder(size),
+    );
+  }
+
+  if (src) {
+    wrap.append(
+      el("img", {
+        src,
+        onError: showPlaceholder,
+        style: {
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          display: "block",
+        },
+      }),
+    );
+  } else {
+    showPlaceholder();
+  }
+
+  return wrap;
 }
