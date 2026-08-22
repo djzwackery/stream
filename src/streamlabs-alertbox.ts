@@ -484,14 +484,21 @@ async function render(startedAt = Date.now()): Promise<void> {
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
   const variant = tokens.dataset.variant || undefined;
   const event = buildEvent(tokens, boxType, tier);
+  // The real Twitch avatar takes priority over whatever Streamlabs put in
+  // {img} (often a generic Image Gallery pick, not the viewer's own photo),
+  // falling back to that only once the lookup below comes up empty.
   // event.name, not the outer `name`: for giftsub they diverge, the
   // standalone {name} token is the recipient, but event.name is whoever's
   // actually shown (the gifter, or "An anonymous gifter"). Looking up the
   // outer `name` there fetched the recipient's photo next to the gifter's
   // name, a real mismatch, and for an anonymous gift, leaked the
   // recipient's real avatar under an alert claiming anonymity.
-  if (!event.avatar && event.name) {
+  const streamlabsImage = event.avatar;
+  if (event.name) {
     event.avatar = await fetchTwitchAvatar(event.name);
+  }
+  if (!event.avatar) {
+    event.avatar = streamlabsImage;
   }
   const durationSeconds = parseFloat(tokens.dataset.duration ?? "");
   const duration = isNaN(durationSeconds)
