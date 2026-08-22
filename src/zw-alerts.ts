@@ -225,7 +225,28 @@ function build(raw: RawAlertPayload): AlertStageEvent {
   return e;
 }
 
-const stage = new AlertStage(document.getElementById("root")!, {
+const root = document.getElementById("root")!;
+
+// #root is a fixed 1920x1080 canvas, matching the recommended OBS source
+// size, so it renders pixel-perfect there (scale is exactly 1). Opened in a
+// plain browser tab for testing, a typical window is shorter than 1080px,
+// and body's overflow:hidden makes anything past that edge unreachable, not
+// just scrolled off, redemptions.html's corner-anchored layout in
+// particular. Shrinking the whole canvas to fit fixes that without
+// changing anything a real, correctly-sized OBS source ever sees.
+function fitCanvas(): void {
+  const scale = Math.min(
+    1,
+    window.innerWidth / 1920,
+    window.innerHeight / 1080,
+  );
+  root.style.transform = `scale(${scale})`;
+  root.style.transformOrigin = "top left";
+}
+window.addEventListener("resize", fitCanvas);
+fitCanvas();
+
+const stage = new AlertStage(root, {
   top: CFG.top,
   onDone: finished,
 });
