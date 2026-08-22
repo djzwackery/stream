@@ -5,6 +5,7 @@ import { Frame } from "./Frame.js";
 import { GlitchName } from "./GlitchName.js";
 import { Ledger } from "./Ledger.js";
 import { Meter } from "./Meter.js";
+import { PowerUp } from "./PowerUp.js";
 import { Reel } from "./Reel.js";
 import { Sidecar } from "./Sidecar.js";
 import { Slab } from "./Slab.js";
@@ -24,4 +25,5 @@ export const LAYOUTS: Record<string, (props: LayoutProps) => HTMLElement> = {
   sidecar: Sidecar,
   frame: Frame,
   reel: Reel,
+  powerup: PowerUp,
 };

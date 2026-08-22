@@ -1,5 +1,8 @@
 /**
- * Variant -> layout + motion, per alert type. Three distinct treatments each.
+ * Variant -> layout + motion, per alert type. Three distinct treatments
+ * each, except bits: its 4th, "surge", is Bits Power-Ups' own dedicated
+ * layout, not part of the streamer's rotation, forced by baking it in as
+ * the only choice on the Streamlabs Power-Up widget rather than picked.
  */
 
 export const VARIANTS: Record<AlertType, AlertVariantDefinition[]> = {
@@ -22,6 +25,14 @@ export const VARIANTS: Record<AlertType, AlertVariantDefinition[]> = {
     { id: "meter", layout: "meter", motion: "stutter" },
     { id: "chip", layout: "sticker", motion: "glitch", burst: true },
     { id: "slab", layout: "slab", motion: "drop", shake: true },
+    {
+      id: "surge",
+      layout: "powerup",
+      motion: "glitch",
+      burst: true,
+      shake: true,
+      strobe: true,
+    },
   ],
   raid: [
     { id: "squad", layout: "squad", motion: "drop", shake: true, burst: true },

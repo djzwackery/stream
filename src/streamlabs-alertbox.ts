@@ -19,7 +19,7 @@
  */
 import { AlertStage } from "./components/AlertStage.js";
 
-const DEFAULT_DURATION_MS = 5000;
+const DEFAULT_DURATION_MS = 8000;
 const TOP_OFFSET = 96;
 
 // Matches zw-alerts.ts's own default tipHuge threshold: a tip at or above
@@ -35,11 +35,11 @@ const TIP_HUGE_THRESHOLD = 100;
 const BUILD_MARKER = "2026-08-21a";
 
 /**
- * The seven per-type Alert Box boxes Streamlabs exposes; `resub` and
- * `giftsub` both map to this repo's single `sub` `AlertType`.
+ * The eight per-type Alert Box boxes Streamlabs exposes; `resub`/`giftsub`
+ * map to this repo's `sub` `AlertType`, `powerup` (Bits Power-Ups) to `bits`.
  */
 type StreamlabsAlertBoxType =
-  "follow" | "sub" | "resub" | "giftsub" | "bits" | "raid" | "tip";
+  "follow" | "sub" | "resub" | "giftsub" | "bits" | "powerup" | "raid" | "tip";
 
 const fmt = (n: number): string =>
   String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -237,6 +237,27 @@ function buildEvent(
       tier,
     };
   }
+  if (boxType === "powerup") {
+    // Maps onto this repo's "bits" AlertType, same currency Power-Ups
+    // actually spend; {powerUpName} rides in `reward`, the field "redeem"
+    // uses for a named thing, closer to what a power-up is than any of
+    // bits' own fields.
+    const powerUpName = readToken(tokens, "powerUpName");
+    const bitsSpent = parseAmount(readToken(tokens, "bitsSpent"));
+    return {
+      type: "bits",
+      name,
+      avatar,
+      message,
+      reward: powerUpName || undefined,
+      amount: `${fmt(bitsSpent)} bits`,
+      detail:
+        messageTemplate ||
+        `redeemed ${powerUpName || "a power-up"} x${fmt(bitsSpent)}`,
+      headline: "⚡ Power-up",
+      tier,
+    };
+  }
   if (boxType === "raid") {
     const party = parseAmount(readToken(tokens, "count")) || 1;
     return {
@@ -376,7 +397,16 @@ const MESSAGE_STABILIZE_MS = 500;
  */
 async function waitForTokensToStabilize(tokens: Element): Promise<void> {
   const read = () =>
-    ["name", "gifter", "count", "months", "amount", "message"]
+    [
+      "name",
+      "gifter",
+      "count",
+      "months",
+      "amount",
+      "powerUpName",
+      "bitsSpent",
+      "message",
+    ]
       .map((t) => readToken(tokens, t))
       .concat([
         readAvatar() ?? "",
@@ -404,6 +434,7 @@ async function waitForTokensToStabilize(tokens: Element): Promise<void> {
 const NUMERIC_TOKEN: Partial<Record<StreamlabsAlertBoxType, string>> = {
   resub: "months",
   bits: "amount",
+  powerup: "bitsSpent",
   raid: "count",
   tip: "amount",
 };
@@ -411,7 +442,7 @@ const NUMERIC_TOKEN: Partial<Record<StreamlabsAlertBoxType, string>> = {
 /**
  * Streamlabs doesn't guarantee its tokens are already substituted into the
  * DOM the instant this script runs, only that they eventually are, so this
- * polls for up to `MAX_WAIT_MS`, well short of the alert's own 5s duration,
+ * polls for up to `MAX_WAIT_MS`, well short of the alert's own duration,
  * instead of a single read that could catch `{name}` or `NUMERIC_TOKEN` too
  * early and render with a default instead of the real value.
  */
@@ -479,6 +510,8 @@ async function render(startedAt = Date.now()): Promise<void> {
       "raw count": readToken(tokens, "count"),
       "raw months": readToken(tokens, "months"),
       "raw amount": readToken(tokens, "amount"),
+      "raw powerUpName": readToken(tokens, "powerUpName"),
+      "raw bitsSpent": readToken(tokens, "bitsSpent"),
       "raw gifter": readToken(tokens, "gifter"),
       "raw message": readToken(tokens, "message"),
       "raw userMessage": readRichText("alert-user-message"),
@@ -486,6 +519,7 @@ async function render(startedAt = Date.now()): Promise<void> {
       "raw alert-image markup":
         document.getElementById("alert-image")?.outerHTML ?? "",
       "event.name": event.name,
+      "event.reward": event.reward ?? "",
       "event.detail": event.detail ?? "",
       "event.message": event.message ?? "",
       "event.amount": event.amount ?? "",

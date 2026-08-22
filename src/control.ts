@@ -183,6 +183,15 @@
       "userMessage",
       "messageTemplate",
     ],
+    powerup: [
+      "name",
+      "img",
+      "powerUpName",
+      "bitsSpent",
+      "message",
+      "userMessage",
+      "messageTemplate",
+    ],
     raid: ["name", "img", "count", "message", "userMessage", "messageTemplate"],
     tip: ["name", "img", "amount", "message", "userMessage", "messageTemplate"],
   };
@@ -196,6 +205,7 @@
     resub: "{name} just resubbed for {months} months!",
     giftsub: "{gifter} has gifted a sub to {name}",
     bits: "{name} cheered! x{amount}",
+    powerup: "{name} redeemed {powerUpName} x{bitsSpent}",
     raid: "{name} is raiding with a party of {count}!",
   };
 
@@ -204,6 +214,7 @@
     resub: "months",
     giftsub: "amount",
     bits: "amount",
+    powerup: "bitsSpent",
     raid: "count",
     tip: "amount",
   };
@@ -232,6 +243,7 @@
     resub: ["card", "slab", "party"],
     giftsub: ["card", "slab", "party"],
     bits: ["meter", "chip", "slab"],
+    powerup: ["surge"],
     raid: ["squad", "siren", "band"],
     tip: ["receipt", "jar", "banner"],
   };
@@ -436,6 +448,7 @@
     const values: Record<string, string> = {
       name: $<HTMLInputElement>("sl-p-name").value.trim(),
       gifter: $<HTMLInputElement>("sl-p-gifter").value.trim(),
+      powerUpName: $<HTMLInputElement>("sl-p-powerup").value.trim(),
       img: randomAvatar(),
       message: $<HTMLInputElement>("sl-p-message").value.trim(),
     };
@@ -498,6 +511,7 @@
   [
     "sl-p-name",
     "sl-p-gifter",
+    "sl-p-powerup",
     "sl-p-value",
     "sl-p-message",
     "sl-p-template",
