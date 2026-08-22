@@ -140,12 +140,37 @@
     step();
   };
 
+  function flashButton(
+    button: HTMLButtonElement,
+    message: string,
+    restoreTo: string | null,
+  ): void {
+    button.textContent = message;
+    setTimeout(() => {
+      button.textContent = restoreTo;
+    }, 1600);
+  }
+
+  // Button id is always the field id plus "-copy" (sl-html -> sl-html-copy),
+  // true for all three Streamlabs code boxes.
   function copyField(id: string): void {
     const field = $<HTMLInputElement | HTMLTextAreaElement>(id);
+    const button = $<HTMLButtonElement>(`${id}-copy`);
+    const label = button.textContent;
     field.select();
-    navigator.clipboard?.writeText(field.value).catch(() => {
-      // clipboard permission denied; the field is still selected for a manual copy
-    });
+    // navigator.clipboard is undefined outside a secure context (a plain
+    // file:// double-click, not localhost or https), and chaining ?. only
+    // guards the .writeText call, not the .catch() after it: calling that on
+    // undefined threw, silently breaking the button with no clipboard write
+    // and no feedback either.
+    if (!navigator.clipboard) {
+      flashButton(button, "Select all + copy manually", label);
+      return;
+    }
+    navigator.clipboard
+      .writeText(field.value)
+      .then(() => flashButton(button, "Copied!", label))
+      .catch(() => flashButton(button, "Select all + copy manually", label));
   }
 
   // Tokens Streamlabs' Alert Box substitutes per alert type (verified
@@ -549,4 +574,22 @@
     "change",
     schedulePreview,
   );
+
+  // Each preview iframe is a fixed 1920x1080 canvas, scaled down to fit
+  // its box: CSS alone can't express "scale to my own rendered width," so
+  // this keeps the two in sync on load and on resize, replacing the old
+  // hardcoded scale(0.5) that only matched a 960px-wide box and clipped on
+  // anything narrower.
+  function fitPreviewFrames(): void {
+    document
+      .querySelectorAll<HTMLIFrameElement>(".preview iframe")
+      .forEach((frame) => {
+        const box = frame.parentElement;
+        if (box) {
+          frame.style.transform = `scale(${box.clientWidth / 1920})`;
+        }
+      });
+  }
+  window.addEventListener("resize", fitPreviewFrames);
+  fitPreviewFrames();
 })();

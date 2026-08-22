@@ -22,5 +22,21 @@
     "headline": "Weights",
     "variant": "frame",
     "tone": "--sun"
+  },
+  "Posture Check!": {
+    "media": "media/posture_check.gif",
+    "cost": 1000,
+    "tier": "small",
+    "variant": "sidecar",
+    "headline": "Posture Check",
+    "tone": "--acid"
+  },
+  "Streeeeeeeeeetch": {
+    "media": "media/stretch.gif",
+    "cost": 1000,
+    "tier": "small",
+    "variant": "sidecar",
+    "headline": "Streeeeeeeeeetch",
+    "tone": "--acid"
   }
 }
