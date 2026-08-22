@@ -32,7 +32,7 @@ const TIP_HUGE_THRESHOLD = 100;
 // widget is its own independently-pasted copy (see the file header), so
 // "still broken" often just means this specific one wasn't re-copied after
 // a fix landed here.
-const BUILD_MARKER = "2026-08-22b";
+const BUILD_MARKER = "2026-08-22c";
 
 /**
  * The eight per-type Alert Box boxes Streamlabs exposes; `resub`/`giftsub`
@@ -169,13 +169,20 @@ function buildEvent(
     };
   }
   if (boxType === "sub") {
+    // Streamlabs has been seen routing a real resub through this plain Sub
+    // slot rather than a separate one, {months} arriving here as the real
+    // count instead of always meaning a brand new sub. Absent or
+    // unsubstituted, this falls back to 1 exactly as before.
+    const months = parseAmount(readToken(tokens, "months")) || 1;
     return {
       type: "sub",
       name,
       avatar,
       message,
-      detail: messageTemplate || "1 month",
-      amount: "1",
+      headline: months > 1 ? "Resub" : undefined,
+      detail:
+        messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
+      amount: String(months),
       tier,
     };
   }

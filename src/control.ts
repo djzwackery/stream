@@ -182,7 +182,10 @@
   // {amount} is the count, only present for a community gift.
   const SL_TOKENS: Record<string, string[]> = {
     follow: ["name", "img", "messageTemplate"],
-    sub: ["name", "img", "message", "userMessage", "messageTemplate"],
+    // months included even here, not just resub: Streamlabs has been seen
+    // routing a real resub through the plain Sub alert slot, not a separate
+    // one, so the Sub widget needs to be able to show the real count too.
+    sub: ["name", "img", "months", "message", "userMessage", "messageTemplate"],
     resub: [
       "name",
       "img",
@@ -236,6 +239,7 @@
 
   // Which token the preview's generic "Value" field below feeds, per type.
   const SL_NUMERIC_TOKEN: Record<string, string> = {
+    sub: "months",
     resub: "months",
     giftsub: "amount",
     bits: "amount",
