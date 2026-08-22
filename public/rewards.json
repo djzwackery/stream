@@ -5,21 +5,21 @@
     "tier": "huge",
     "variant": "sidecar",
     "tone": "--magenta",
-    "headline": "Anime Save"
+    "headline": "For some reason it must be saved"
   },
   "Hydrate!": {
     "media": "media/hydrate-the-dj.gif",
     "cost": 1000,
     "tier": "small",
     "variant": "sidecar",
-    "headline": "Hydrate",
+    "headline": "Drink up",
     "tone": "--acid"
   },
   "Weights": {
     "media": "media/weights.gif",
     "cost": 3000,
     "tier": "big",
-    "headline": "Weights",
+    "headline": "Hit the gym",
     "variant": "frame",
     "tone": "--sun"
   },
@@ -28,7 +28,7 @@
     "cost": 1000,
     "tier": "small",
     "variant": "sidecar",
-    "headline": "Posture Check",
+    "headline": "Straighten that back",
     "tone": "--acid"
   },
   "Streeeeeeeeeetch": {
