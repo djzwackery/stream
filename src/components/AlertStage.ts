@@ -14,6 +14,21 @@ import { KEYFRAMES, MOTION, TIER, TYPE } from "./tokens.js";
 import { VARIANTS } from "./variants.js";
 
 /**
+ * Redemptions come from a separate, uncoordinated system from Streamlabs'
+ * own Alert Box (see ARCHITECTURE.md's Event flow section), so there's no
+ * way to know when a Streamlabs alert is already on screen. Rather than
+ * risk landing on top of one, redemptions always render at this reduced
+ * scale, tucked into the corner below, and never take the full-bleed
+ * takeover treatment, regardless of tier.
+ */
+const REDEEM_SCALE = 0.62;
+
+/**
+ * Left and bottom inset, in pixels, for the redeem corner anchor.
+ */
+const REDEEM_INSET = 56;
+
+/**
  * Constructor options for `AlertStage`.
  */
 export interface AlertStageOptions {
@@ -55,8 +70,12 @@ export class AlertStage {
     const list = VARIANTS[event.type] ?? VARIANTS.follow;
     const v = list.find((x) => x.id === event.variant) ?? list[0]!;
     const tier = event.tier || "big";
-    const takeover = tier === "huge";
-    const s = TIER[tier] * (takeover ? (v.full ? 1.05 : 1.15) : 1);
+    const isRedeem = event.type === "redeem";
+    const takeover = tier === "huge" && !isRedeem;
+    const s =
+      TIER[tier] *
+      (takeover ? (v.full ? 1.05 : 1.15) : 1) *
+      (isRedeem ? REDEEM_SCALE : 1);
     const Layout = LAYOUTS[v.layout]!;
     const [inAnim, outAnim] = MOTION[v.motion]!;
     const burst = v.burst || takeover;
@@ -69,9 +88,15 @@ export class AlertStage {
         zIndex: 120,
         overflow: "hidden",
         display: "grid",
-        placeItems: takeover ? "center" : "start center",
-        paddingTop: takeover ? 0 : this.top,
-        gridTemplateColumns: v.full ? "1fr" : "auto",
+        placeItems: takeover
+          ? "center"
+          : isRedeem
+            ? "end start"
+            : "start center",
+        paddingTop: takeover || isRedeem ? 0 : this.top,
+        paddingInlineStart: isRedeem ? REDEEM_INSET : 0,
+        paddingBlockEnd: isRedeem ? REDEEM_INSET : 0,
+        gridTemplateColumns: v.full && !isRedeem ? "1fr" : "auto",
       },
     });
 
@@ -126,7 +151,7 @@ export class AlertStage {
     const animWrapper = el("div", {
       style: {
         position: "relative",
-        justifySelf: v.full ? "stretch" : "center",
+        justifySelf: isRedeem ? "start" : v.full ? "stretch" : "center",
         animation: inAnim,
         willChange: "transform, clip-path, opacity",
       },

@@ -71,6 +71,15 @@ export const KEYFRAMES = `
   20% { transform: translateY(7%); }
   100% { transform: translateY(-170%); opacity: 0; }
 }
+@keyframes zwa-slide-in {
+  0% { transform: translateX(-120%); opacity: 0; }
+  60% { transform: translateX(4%); opacity: 1; }
+  100% { transform: translateX(0); }
+}
+@keyframes zwa-slide-out {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-120%); opacity: 0; }
+}
 @keyframes zwa-shake {
   0%, 100% { transform: translate(0, 0); }
   20% { transform: translate(-7px, 4px); }
@@ -230,6 +239,10 @@ export const MOTION: Record<string, [string, string]> = {
   drop: [
     "zwa-drop-in 0.5s cubic-bezier(0.2,0.9,0.25,1) both",
     "zwa-drop-out 0.4s cubic-bezier(0.4,0,1,1) both",
+  ],
+  slide: [
+    "zwa-slide-in 0.4s steps(5, end) both",
+    "zwa-slide-out 0.32s steps(4, end) both",
   ],
 };
 

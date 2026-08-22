@@ -39,9 +39,13 @@ export const VARIANTS: Record<AlertType, AlertVariantDefinition[]> = {
     { id: "siren", layout: "glitch", motion: "glitch", strobe: true },
     { id: "band", layout: "strip", motion: "stutter", full: true },
   ],
+  // All three slide in from the left and stay small: redemptions come from
+  // a separate, uncoordinated system from Streamlabs' own alerts (see
+  // AlertStage's redeem branch), so they never take the takeover treatment
+  // regardless of tier.
   redeem: [
-    { id: "sidecar", layout: "sidecar", motion: "stamp" },
-    { id: "frame", layout: "frame", motion: "drop", shake: true },
-    { id: "reel", layout: "reel", motion: "wipe", full: true },
+    { id: "sidecar", layout: "sidecar", motion: "slide" },
+    { id: "frame", layout: "frame", motion: "slide" },
+    { id: "reel", layout: "reel", motion: "slide" },
   ],
 };

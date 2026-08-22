@@ -174,7 +174,11 @@ to a single layout function and a size multiplier, then builds and appends it:
   `LAYOUTS[variant.layout]` ([`layouts/index.ts`](src/components/layouts/index.ts)) resolves it to
   the actual layout function (`Sticker`, `Ledger`, `Sidecar`, ...).
 - `TIER[event.tier]` scales everything (`s`, the size multiplier every layout takes); `huge`
-  additionally switches to the full-bleed takeover treatment.
+  additionally switches to the full-bleed takeover treatment, except for `redeem` events, which
+  never take it regardless of tier and render at a further reduced scale, anchored to the
+  bottom-left corner instead of top-center. Redemptions and Streamlabs' own alerts are two
+  uncoordinated systems (see Event flow, above) with no way to tell when the other is on screen, so
+  this keeps them out of each other's way by construction rather than by timing.
 - `MOTION[variant.motion]` gives the intro/outro keyframe pair. `show()` schedules three
   `setTimeout`s off `duration` (stop the entry shake, swap to the outro animation, then clear the
   container and call `onDone`) instead of a `phase` state machine, since there's only ever one

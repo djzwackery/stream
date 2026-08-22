@@ -1,5 +1,5 @@
 /**
- * Thin scrolling bar for cheap, spammy rewards, redeem layout.
+ * Thin ticket-style bar for cheap, spammy rewards, redeem layout.
  */
 import { el } from "../dom.js";
 import { MediaBox } from "../MediaBox.js";
@@ -16,7 +16,7 @@ export function Reel({ e, s, tone, t, hideEyebrow }: LayoutProps): HTMLElement {
     "div",
     {
       style: {
-        width: "100%",
+        width: 440 * s,
         background: `var(${tone})`,
         color: "var(--void)",
         borderBlock: `${Math.round(5 * s)}px solid var(--void)`,
