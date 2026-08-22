@@ -422,7 +422,8 @@ function connectRedemptionHub(): void {
   };
 }
 
-// manual test: ?test=sub&tier=huge, and keys 1–6 (hold shift = big, alt = huge)
+// manual test: ?test=sub&tier=huge, ?test=redeem&reward=Weights, and keys
+// 1–6 (hold shift = big, alt = huge)
 const TEST: Record<AlertType, RawAlertPayload> = {
   follow: { type: "follow", name: "dutchie" },
   sub: {
@@ -449,14 +450,23 @@ const TEST: Record<AlertType, RawAlertPayload> = {
 };
 const t = qs.get("test");
 if (t && t in TEST) {
-  setTimeout(
-    () =>
-      fire({
-        ...TEST[t as AlertType],
-        tier: (qs.get("tier") as AlertTier) || undefined,
-      }),
-    400,
-  );
+  // Only overrides a field when the query string actually sets it: TEST's
+  // own reward/name/tier are the defaults, so an absent param has to leave
+  // them alone rather than blank them out.
+  const payload: RawAlertPayload = { ...TEST[t as AlertType] };
+  const tier = qs.get("tier");
+  if (tier) {
+    payload.tier = tier as AlertTier;
+  }
+  const reward = qs.get("reward");
+  if (reward) {
+    payload.reward = reward;
+  }
+  const name = qs.get("name");
+  if (name) {
+    payload.name = name;
+  }
+  setTimeout(() => fire(payload), 400);
 }
 const KEYS: AlertType[] = ["follow", "sub", "tip", "bits", "raid", "redeem"];
 window.addEventListener("keydown", (ev: KeyboardEvent) => {

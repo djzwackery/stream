@@ -205,6 +205,13 @@ export class AlertStage {
         shakeWrapper.style.animation = "";
       }, 700),
     );
+    // duration <= 0 means hold forever, for eyeballing a layout's actual
+    // size/position without it clearing mid-look: skip scheduling the
+    // outro and the auto-clear entirely, rather than just picking a very
+    // large number and hoping nobody waits that long.
+    if (duration <= 0) {
+      return;
+    }
     this.timers.push(
       window.setTimeout(
         () => {

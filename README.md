@@ -91,7 +91,9 @@ alert can't arrive at a dead source.
 
 Test without a real event: open the source's **Interact** window and press **1**-**6** (follow /
 sub / tip / bits / raid / redeem). Hold **shift** for big, **alt** for huge. Or load
-`alerts.html?test=raid&tier=huge`. In `redemptions.html` the test key is **6**.
+`alerts.html?test=raid&tier=huge`. In `redemptions.html` the test key is **6**, and `?test=redeem`
+also takes `&reward=` and `&name=` to test a specific reward, e.g.
+`redemptions.html?test=redeem&reward=Posture+Check!`.
 
 ## 🔌 Wiring real events
 
@@ -176,7 +178,8 @@ ZW.fire({ type: "redeem", name: "ravemum74", reward: "Attempt anime save" });
 
 `alerts.html?duration=5000&top=96&tipBig=20&tipHuge=100&bitsBig=1000&bitsHuge=5000&raidBig=20&raidHuge=100&monthsBig=6&giftHuge=10&currency=AUD`
 
-- `duration`: ms on screen including intro/outro (default 5000)
+- `duration`: ms on screen including intro/outro (default 5000, 8000 for `redemptions.html`). `0`
+  holds forever, no outro, no auto-clear, for eyeballing a layout's actual size.
 - `top`: banner offset from the top edge in px (default 96)
 - `*Big` / `*Huge`: the tier thresholds above
 - `follow=stamp` / `sub=card` / `tip=jar` / `bits=meter` / `raid=squad`: pin one layout instead of
