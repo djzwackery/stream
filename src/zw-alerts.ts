@@ -120,6 +120,14 @@ const slug = (s: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+
+// A redeem event arriving before this resolves would look up an empty
+// REWARDS and silently fall back to generic headline/tone/tier/variant,
+// not because rewards.json is missing, just not loaded yet: control.html's
+// rehearsal panel reloads the preview iframe fresh and fires into it only
+// 150ms later, nowhere near long enough for this fetch to have landed.
+let rewardsReady = false;
+const pendingRedeems: RawAlertPayload[] = [];
 fetch(CFG.rewards, { cache: "no-store" })
   .then((r) => r.json())
   .then((rewards: Record<string, RewardConfig>) => {
@@ -129,7 +137,11 @@ fetch(CFG.rewards, { cache: "no-store" })
   })
   .catch(() =>
     console.warn(`[zw] no ${CFG.rewards}, redemptions will use placeholders`),
-  );
+  )
+  .finally(() => {
+    rewardsReady = true;
+    pendingRedeems.splice(0).forEach(fire);
+  });
 
 /**
  * Substitutes Streamlabs-style `{token}` placeholders in a template string,
@@ -263,6 +275,13 @@ function pump(): void {
 let lastSeenAt = 0;
 function fire(raw: RawAlertPayload): void {
   if (!CFG.accept.includes(raw.type)) {
+    return;
+  }
+  // Queued ahead of the lastSeenAt de-dup below, not after: replaying a
+  // pending event through this same function once rewards load has to see
+  // it as new, not reject it as an already-seen duplicate of itself.
+  if (raw.type === "redeem" && !rewardsReady) {
+    pendingRedeems.push(raw);
     return;
   }
   // control.html delivers the same event over BroadcastChannel, a localStorage

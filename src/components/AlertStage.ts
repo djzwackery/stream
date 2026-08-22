@@ -62,6 +62,19 @@ export class AlertStage {
    * Plays one alert event, replacing whatever is currently shown.
    */
   show(event: AlertStageEvent, duration: number): void {
+    // Everything here leans on CSS custom properties (var(--void), var(--font-display),
+    // ...) defined in styles.css/tokens/*.css, not inline: if those haven't
+    // finished loading yet, this renders as blank/colourless, not just
+    // "unstyled" HTML. Streamlabs reloads this page fresh for every single
+    // alert, re-fetching that CSS from scratch each time, not just once per
+    // stream, so this is worth guarding rather than trusting timing. Once
+    // `load` fires, re-entering with the same arguments proceeds normally.
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", () => this.show(event, duration), {
+        once: true,
+      });
+      return;
+    }
     this.clearTimers();
     this.container.replaceChildren();
 

@@ -71,6 +71,14 @@ export class NowPlayingCard {
    * animation) when `visible` is false.
    */
   update(track: TrackInfo, visible: boolean): void {
+    // Same CSS-custom-property dependency as AlertStage.show(), same guard:
+    // never render against styles.css/tokens/*.css before they've loaded.
+    if (document.readyState !== "complete") {
+      window.addEventListener("load", () => this.update(track, visible), {
+        once: true,
+      });
+      return;
+    }
     this.cardEl.style.animation = visible
       ? "zw-np-in 0.5s steps(4, end) both"
       : "zw-np-out 0.38s steps(3, end) both";

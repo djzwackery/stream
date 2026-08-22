@@ -240,9 +240,12 @@ export const MOTION: Record<string, [string, string]> = {
     "zwa-drop-in 0.5s cubic-bezier(0.2,0.9,0.25,1) both",
     "zwa-drop-out 0.4s cubic-bezier(0.4,0,1,1) both",
   ],
+  // Smooth, not stepped, unlike the rest of these: a corner toast reads as
+  // quiet by design (see AlertStage's redeem branch), and a juddery glitch
+  // motion fights that on both ends, not just the exit.
   slide: [
-    "zwa-slide-in 0.4s steps(5, end) both",
-    "zwa-slide-out 0.32s steps(4, end) both",
+    "zwa-slide-in 0.4s cubic-bezier(0.2,0.9,0.25,1) both",
+    "zwa-slide-out 0.32s cubic-bezier(0.4,0,1,1) both",
   ],
 };
 
