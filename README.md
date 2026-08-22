@@ -112,15 +112,18 @@ alternative for anyone forking this for a StreamElements-based setup instead.
 maintain: Streamlabs' own Alert Box widget has a native per-type "Custom HTML/CSS/JS" editor that
 can run this repo's alert layout directly.
 [`control.html`](control.html)'s **Streamlabs Alert Box code** section generates a copy-pasteable
-HTML/CSS/JS box per type/tier/variant combination
-([`src/streamlabs-alertbox.ts`](src/streamlabs-alertbox.ts) is what the JS box is); paste all
-three into the matching Alert Box type (and variation, for a specific tier) in the Streamlabs
-dashboard. Streamlabs re-renders the pasted HTML fresh for every alert and handles queueing/duration
-itself, so once it's pasted
-there's nothing left running to reconnect, ever. Streamlabs' events don't carry a real per-viewer
-avatar, so the driver looks one up live from Twitch through the relay Worker
-([`worker/`](worker/README.md)) by matching the display name to a Twitch login, falling back to
-the placeholder glyph if that lookup doesn't match, is slow, or fails.
+HTML/CSS/JS box per type/tier/variant combination; paste all three into the matching Alert Box type
+(and variation, for a specific tier) in the Streamlabs dashboard. The JS box is a small loader, not
+[`src/streamlabs-alertbox.ts`](src/streamlabs-alertbox.ts) itself: it sets the API token and loads
+the real bundle from djzwackery.com, so a fix there reaches every pasted widget next time it fires,
+no re-pasting. Streamlabs re-renders the pasted HTML fresh for every alert and handles
+queueing/duration itself, so once it's pasted there's nothing left running to reconnect, ever.
+
+Streamlabs' events don't carry a real per-viewer avatar, so the driver looks one up live from
+Twitch through the relay Worker ([`worker/`](worker/README.md)) by matching the display name to a
+Twitch login, falling back to the placeholder glyph if that lookup doesn't match, is slow, or
+fails. The generator's "Prefer Streamlabs' image" checkbox flips that priority for types like
+Power-Ups, whose `{img}` is the meaningful image (the power-up's own icon, not a viewer photo).
 
 **Twitch (Channel Point redemptions).** Streamlabs' Alert Box has no type for these at all, so
 `redemptions.html` gets them from a small Cloudflare Worker

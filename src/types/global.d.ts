@@ -480,4 +480,10 @@ interface Window {
    * Called by the Now Playing app's "Hide After" setting to show the card again.
    */
   onShow?: () => void;
+  /**
+   * The Streamlabs relay Worker API token, set by the loader stub pasted
+   * into Streamlabs' JS box, so the token is never baked into the publicly
+   * served bundle.
+   */
+  ZW_SL_TOKEN?: string;
 }

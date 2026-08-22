@@ -183,16 +183,26 @@
     </div>
     <h2>Streamlabs Alert Box code</h2>
     <p>
-      One widget per type/tier/variant. Paste HTML → Streamlabs "HTML", CSS →
-      "CSS", JS → "JS" (all three, its JS box can't run a
-      <code>&lt;script&gt;</code> tag). Enter the API token once below, it's
-      baked into the JS box for you and remembered on this browser. Set that
-      widget's own condition in Streamlabs. Set Duration to match Streamlabs'
-      own "Alert Duration" for this widget, custom code has no way to read it,
-      so a mismatch either cuts the outro off or leaves a blank gap before
-      Streamlabs clears it. Check "Debug overlay" before copying to bake a small
-      on-screen readout into that specific widget, no devtools needed, just
-      screenshot it and send it over.
+      One widget per type/tier/variant. Paste HTML, CSS, and JS into the
+      matching Streamlabs boxes (its JS box can't run a
+      <code>&lt;script&gt;</code> tag). The JS here is a small loader, so paste
+      it once, future fixes reach this widget automatically, no re-pasting.
+    </p>
+    <p>
+      Enter the API token once, it's remembered on this browser. Set Duration to
+      match Streamlabs' own "Alert Duration", custom code can't read that
+      setting, so a mismatch cuts the outro short or leaves a gap before
+      Streamlabs clears the widget.
+    </p>
+    <p>
+      The image slot prefers the viewer's real Twitch avatar, falling back to
+      Streamlabs' {img} if that lookup fails. Check "Prefer Streamlabs' image"
+      when that's the meaningful one instead: Power-Ups send their own icon
+      there, not a viewer photo, so the Twitch avatar would be the wrong pick.
+    </p>
+    <p>
+      Check "Debug overlay" to bake a small on-screen readout into the widget
+      before copying, useful for troubleshooting without devtools.
     </p>
     <div class="row">
       <label
@@ -229,6 +239,13 @@
           size="4"
           title="Match Streamlabs' own Alert Duration setting for this widget, it can't be read from custom code"
       /></label>
+      <label style="flex-direction: row; align-items: center; gap: 0.4rem"
+        ><input
+          type="checkbox"
+          id="sl-avatar-streamlabs"
+          style="width: auto; padding: 0"
+        />Prefer Streamlabs' image</label
+      >
       <label style="flex-direction: row; align-items: center; gap: 0.4rem"
         ><input
           type="checkbox"

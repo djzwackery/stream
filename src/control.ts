@@ -272,6 +272,7 @@
     values?: Record<string, string>,
     debug?: boolean,
     durationSeconds?: string,
+    avatarSource: "twitch" | "streamlabs" = "twitch",
   ): string {
     const tokens = SL_TOKENS[type] ?? [];
     const richTokens = tokens.filter((t) => t in SL_RICH_TOKEN_IDS);
@@ -310,7 +311,7 @@
     return [
       '<link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />',
       richBlock,
-      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}"${durationSeconds ? ` data-duration="${durationSeconds}"` : ""}${debug ? ' data-debug="1"' : ""} hidden>`,
+      `<div id="zw-tokens" data-alert-type="${type}" data-tier="${tier}" data-variant="${variant}"${durationSeconds ? ` data-duration="${durationSeconds}"` : ""}${debug ? ' data-debug="1"' : ""}${avatarSource === "streamlabs" ? ' data-avatar-source="streamlabs"' : ""} hidden>`,
       simpleSpans,
       "</div>",
       '<div id="root"></div>',
@@ -337,6 +338,9 @@
     const variant = $<HTMLSelectElement>("sl-variant").value;
     const debug = $<HTMLInputElement>("sl-debug").checked;
     const duration = $<HTMLInputElement>("sl-duration").value.trim();
+    const avatarSource = $<HTMLInputElement>("sl-avatar-streamlabs").checked
+      ? "streamlabs"
+      : "twitch";
     $<HTMLTextAreaElement>("sl-html").value = generateStreamlabsHtml(
       type,
       tier,
@@ -344,6 +348,7 @@
       undefined,
       debug,
       duration,
+      avatarSource,
     );
     $<HTMLTextAreaElement>("sl-css").value = SL_CSS;
   }
@@ -369,6 +374,10 @@
     "change",
     updateStreamlabsCode,
   );
+  $<HTMLInputElement>("sl-avatar-streamlabs").addEventListener(
+    "change",
+    updateStreamlabsCode,
+  );
   $<HTMLInputElement>("sl-duration").addEventListener(
     "input",
     updateStreamlabsCode,
@@ -377,30 +386,37 @@
   updateStreamlabsCode();
   fillSlDefaultTemplate();
 
-  // Matches the placeholder streamlabs-alertbox.ts ships with (that file's
-  // own source is the other place this exact string is defined).
-  const API_TOKEN_PLACEHOLDER = "PASTE_YOUR_API_TOKEN_HERE";
   const API_TOKEN_STORAGE_KEY = "zw-api-token";
 
-  // The JS box doesn't vary per type (streamlabs-alertbox.ts reads the type
-  // off data-alert-type at run time), so it's fetched once, as the
-  // esbuild-bundled self-contained build (Streamlabs runs it standalone, it
-  // can't resolve `import`s). Kept separate from what's shown: the token
-  // substitution below re-derives the displayed value each time instead of
-  // mutating it in place.
-  let slJsBundle = "";
+  const HOSTED_BUNDLE_URL =
+    "https://djzwackery.com/stream/js/streamlabs-alertbox.bundle.js";
 
+  // The JS box pasted into Streamlabs is a tiny loader, not the bundle
+  // itself. It sets window.ZW_SL_TOKEN and injects a <script src> pulling
+  // the real logic from djzwackery.com, so a fix only needs pushing here,
+  // never re-pasting into Streamlabs. `?v=Date.now()` cache-busts every
+  // fetch (see now-playing-theme.html's cache-buster for the same bug class).
   function renderSlJs(): void {
     const token = $<HTMLInputElement>("sl-token").value.trim();
-    $<HTMLTextAreaElement>("sl-js").value = token
-      ? slJsBundle.replace(API_TOKEN_PLACEHOLDER, token)
-      : slJsBundle;
+    $<HTMLTextAreaElement>("sl-js").value = [
+      `window.ZW_SL_TOKEN = ${JSON.stringify(token)};`,
+      "(function () {",
+      '  var s = document.createElement("script");',
+      `  s.src = ${JSON.stringify(HOSTED_BUNDLE_URL)} + "?v=" + Date.now();`,
+      "  document.body.appendChild(s);",
+      "})();",
+    ].join("\n");
   }
+
+  // Used only by the sandboxed preview below, which runs this text directly
+  // instead of the loader stub, so local edits show up without a push.
+  let slJsBundle = "";
 
   const savedToken = localStorage.getItem(API_TOKEN_STORAGE_KEY);
   if (savedToken) {
     $<HTMLInputElement>("sl-token").value = savedToken;
   }
+  renderSlJs();
   $<HTMLInputElement>("sl-token").addEventListener("input", () => {
     const value = $<HTMLInputElement>("sl-token").value.trim();
     if (value) {
@@ -409,13 +425,13 @@
       localStorage.removeItem(API_TOKEN_STORAGE_KEY);
     }
     renderSlJs();
+    previewStreamlabs();
   });
 
   fetch("js/streamlabs-alertbox.bundle.js", { cache: "no-store" })
     .then((r) => r.text())
     .then((js) => {
       slJsBundle = js;
-      renderSlJs();
       previewStreamlabs();
     })
     .catch(() =>
@@ -485,14 +501,20 @@
       buildPreviewValues(type),
       true,
       $<HTMLInputElement>("sl-duration").value.trim(),
+      $<HTMLInputElement>("sl-avatar-streamlabs").checked
+        ? "streamlabs"
+        : "twitch",
     );
     const safeBundle = slJsBundle.replace(/<\/script/gi, "<\\/script");
+    const token = $<HTMLInputElement>("sl-token").value.trim();
     const doc = [
       '<!doctype html><html><head><meta charset="utf-8" />',
       '<link rel="stylesheet" href="styles.css" />',
       `<style>${SL_CSS}</style>`,
       "</head><body>",
       html,
+      // Same global the real loader stub sets, just without the fetch.
+      `<script>window.ZW_SL_TOKEN = ${JSON.stringify(token)};</script>`,
       `<script>${safeBundle}</script>`,
       "</body></html>",
     ].join("\n");
@@ -520,6 +542,10 @@
   $<HTMLSelectElement>("sl-type").addEventListener("change", schedulePreview);
   $<HTMLSelectElement>("sl-tier").addEventListener("change", schedulePreview);
   $<HTMLSelectElement>("sl-variant").addEventListener(
+    "change",
+    schedulePreview,
+  );
+  $<HTMLInputElement>("sl-avatar-streamlabs").addEventListener(
     "change",
     schedulePreview,
   );

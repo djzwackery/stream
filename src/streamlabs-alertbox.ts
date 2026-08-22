@@ -32,7 +32,7 @@ const TIP_HUGE_THRESHOLD = 100;
 // widget is its own independently-pasted copy (see the file header), so
 // "still broken" often just means this specific one wasn't re-copied after
 // a fix landed here.
-const BUILD_MARKER = "2026-08-21a";
+const BUILD_MARKER = "2026-08-22b";
 
 /**
  * The eight per-type Alert Box boxes Streamlabs exposes; `resub`/`giftsub`
@@ -299,12 +299,9 @@ const AVATAR_LOOKUP_URL =
 
 const AVATAR_FETCH_TIMEOUT_MS = 1200;
 
-// Replace with the real token before pasting this into Streamlabs (ask
-// whoever deployed the Worker for it, see worker/README.md). This file
-// itself, including this literal placeholder, is served publicly from
-// djzwackery.com, so the real token can never live here in source, only
-// in the copy that actually gets pasted into your Streamlabs dashboard.
-const API_TOKEN = "PASTE_YOUR_API_TOKEN_HERE";
+// Set by control.ts's loader stub via window.ZW_SL_TOKEN. This file is
+// public, so a hardcoded token here would leak.
+const API_TOKEN = window.ZW_SL_TOKEN ?? "";
 
 /**
  * The relay Worker's `/twitch/avatar` response shape.
@@ -510,25 +507,28 @@ async function render(startedAt = Date.now()): Promise<void> {
   const tier = (tokens.dataset.tier as AlertTier | undefined) || "big";
   const variant = tokens.dataset.variant || undefined;
   const event = buildEvent(tokens, boxType, tier);
-  // The real Twitch avatar takes priority over whatever Streamlabs put in
-  // {img} (often a generic Image Gallery pick, not the viewer's own photo),
-  // falling back to that only once the lookup below comes up empty.
-  // event.name, not the outer `name`: for giftsub they diverge, the
-  // standalone {name} token is the recipient, but event.name is whoever's
-  // actually shown (the gifter, or "An anonymous gifter"). Looking up the
-  // outer `name` there fetched the recipient's photo next to the gifter's
-  // name, a real mismatch, and for an anonymous gift, leaked the
-  // recipient's real avatar under an alert claiming anonymity.
+  // control.html's "Prefer Streamlabs' image" checkbox. Power-Ups send their
+  // own icon in {img}, not a generic pick, so the Twitch avatar would be the
+  // wrong image there, not just an unwanted one.
+  const preferStreamlabsImage = tokens.dataset.avatarSource === "streamlabs";
   const streamlabsImage = event.avatar;
-  if (event.name) {
-    const twitchAvatar = await fetchTwitchAvatar(event.name);
-    event.avatar =
-      twitchAvatar && (await imageLoads(twitchAvatar))
-        ? twitchAvatar
-        : undefined;
-  }
-  if (!event.avatar) {
+  if (preferStreamlabsImage) {
     event.avatar = streamlabsImage;
+  } else {
+    // Uses event.name, not the outer `name`: for giftsub they diverge (the
+    // token is the recipient, event.name is the gifter or "An anonymous
+    // gifter"). Looking up the outer name leaked the recipient's real photo
+    // under an anonymous-gift alert.
+    if (event.name) {
+      const twitchAvatar = await fetchTwitchAvatar(event.name);
+      event.avatar =
+        twitchAvatar && (await imageLoads(twitchAvatar))
+          ? twitchAvatar
+          : undefined;
+    }
+    if (!event.avatar) {
+      event.avatar = streamlabsImage;
+    }
   }
   const durationSeconds = parseFloat(tokens.dataset.duration ?? "");
   const duration = isNaN(durationSeconds)
@@ -562,6 +562,9 @@ async function render(startedAt = Date.now()): Promise<void> {
       "event.amount": event.amount ?? "",
       "event.fill": String(event.fill ?? ""),
       "event.party": String(event.party ?? ""),
+      "avatar source": preferStreamlabsImage
+        ? "streamlabs (forced)"
+        : "twitch (fallback streamlabs)",
       "event.avatar": event.avatar || "no (placeholder shown)",
     });
   }

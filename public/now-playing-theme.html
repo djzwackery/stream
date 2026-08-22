@@ -17,6 +17,14 @@
   Playing's server has no js/ folder of its own to resolve a relative path
   against. Its own internal imports still resolve fine cross-origin: GitHub
   Pages sends `Access-Control-Allow-Origin: *` on every file it serves.
+
+  The ?v= on that script tag isn't a real version scheme, just a cache
+  buster: confirmed live that a fix landing on djzwackery.com and working in
+  a plain browser tab still didn't reach Now Playing's own embedded browser,
+  which appears to cache this URL more persistently than OBS's own browser
+  source does. Bump the value whenever zw-nowplaying.ts or NowPlaying.ts
+  changes, or a fix here won't actually reach anyone using this file until
+  they re-select it in Now Playing's Theme Editor anyway.
 -->
     <link rel="stylesheet" href="https://djzwackery.com/stream/styles.css" />
     <style>
