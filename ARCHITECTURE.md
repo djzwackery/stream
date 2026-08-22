@@ -180,12 +180,12 @@ to a single layout function and a size multiplier, then builds and appends it:
   container and call `onDone`) instead of a `phase` state machine, since there's only ever one
   event live at a time and nothing else needs to observe the phase mid-flight.
 
-The ten layout functions (`Sticker`, `Strip`, `GlitchName`, `Ledger`, `Meter`, `Squad`, `Slab`,
-`Sidecar`, `Frame`, `Reel`, all under `src/components/layouts/`) take the same `LayoutProps` shape
-and share a handful of style helpers (`label`, `display`, `panel`, in
+The eleven layout functions (`Sticker`, `Strip`, `GlitchName`, `Ledger`, `Meter`, `Squad`, `Slab`,
+`Sidecar`, `Frame`, `Reel`, `PowerUp`, all under `src/components/layouts/`) take the same
+`LayoutProps` shape and share a handful of style helpers (`label`, `display`, `panel`, in
 [`style-helpers.ts`](src/components/style-helpers.ts)) and sub-components (`Avatar`, `GoalBar`,
-`Scanlines`, `MediaBox`). The last three, `Sidecar`/`Frame`/`Reel`, plus `MediaBox`, are what
-render a reward's GIF for `redeem` events.
+`Scanlines`, `MediaBox`). `Sidecar`/`Frame`/`Reel`, plus `MediaBox`, are what render a reward's GIF
+for `redeem` events; `PowerUp` reuses `MediaBox` too, for a Bits Power-Up's own image.
 
 `NowPlayingCard` ([`NowPlaying.ts`](src/components/NowPlaying.ts)) is a small class instead of a
 pure function, since it needs to remember the previous track key across calls to decide whether to
