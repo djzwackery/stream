@@ -40,17 +40,22 @@ export function Sidecar({
     el(
       "div",
       null,
+      // No separate e.detail line: for redeem that's just e.reward's own
+      // title again, restating the headline above in plainer words rather
+      // than adding anything, one bold line short of the eyebrow instead
+      // of two, easier to read at a glance and on stream.
       !hideEyebrow &&
-        el("div", { style: label(s * 0.95) }, e.headline || t.eyebrow),
+        el("div", { style: label(s * 1.5) }, e.headline || t.eyebrow),
       el(
         "div",
-        { style: { ...display(s, 2.6), marginTop: `${0.5 * s}rem` } },
+        {
+          style: {
+            ...display(s, 3),
+            marginTop: `${0.55 * s}rem`,
+            textShadow: `${3 * s}px ${3 * s}px 0 var(--void)`,
+          },
+        },
         e.name,
-      ),
-      el(
-        "div",
-        { style: { ...label(s * 0.95), marginTop: `${0.55 * s}rem` } },
-        e.detail,
       ),
     ),
     Scanlines(),
