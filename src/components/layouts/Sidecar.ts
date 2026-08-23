@@ -48,13 +48,7 @@ export function Sidecar({
         el("div", { style: label(s * 1.5) }, e.headline || t.eyebrow),
       el(
         "div",
-        {
-          style: {
-            ...display(s, 3),
-            marginTop: `${0.55 * s}rem`,
-            textShadow: `${3 * s}px ${3 * s}px 0 var(--void)`,
-          },
-        },
+        { style: { ...display(s, 2.6), marginTop: `${0.5 * s}rem` } },
         e.name,
       ),
     ),
