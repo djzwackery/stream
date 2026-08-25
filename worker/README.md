@@ -1,4 +1,4 @@
-# Twitch relay Worker 📡
+# Twitch Relay Worker 📡
 
 A small Cloudflare Worker that relays Twitch Channel Point redemptions to `redemptions.html` and
 looks up real Twitch avatars for the Streamlabs Alert Box driver, so a streamer never has to hold
