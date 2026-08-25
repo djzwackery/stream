@@ -12,12 +12,6 @@ Twitch  --(refresh_token grant, via Cron every 3h)-->  Worker  (keeps the access
 Twitch  <--(GET /helix/users, cached in KV)--  Worker  <--(GET /twitch/avatar?login=X)--  streamlabs-alertbox.ts (in Streamlabs' widget)
 ```
 
-A separate deployable project: its own `package.json`, `tsconfig.json`, and `wrangler.toml`,
-deployed independently by
-[`.github/workflows/deploy-worker.yml`](../.github/workflows/deploy-worker.yml), not touched by
-the root `npm run build`/`deploy.yml`. Root `npm run check`/`format` still sweep `worker/**/*.ts`
-for Prettier, but nothing here is linted by the root `eslint.config.js`.
-
 ## ⚙️ One-time setup
 
 Only needs doing once per deployment, not per stream.
