@@ -1,7 +1,7 @@
 /**
  * This source renders point redemptions only; alerts.html takes the five
  * Twitch events. Two sources means a redemption never waits behind a raid.
- * Also defaults to an 8s hold instead of alerts.html's 5s, redemptions get
+ * Also defaults to a 10s hold instead of alerts.html's 5s, redemptions get
  * their own default since they're a separate, slower-paced moment, not
  * something to rush past between other alerts.
  */
@@ -13,7 +13,7 @@
     changed = true;
   }
   if (!url.searchParams.get("duration")) {
-    url.searchParams.set("duration", "8000");
+    url.searchParams.set("duration", "10000");
     changed = true;
   }
   if (changed) {

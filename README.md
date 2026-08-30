@@ -178,7 +178,7 @@ ZW.fire({ type: "redeem", name: "ravemum74", reward: "Attempt anime save" });
 
 `alerts.html?duration=5000&top=96&tipBig=20&tipHuge=100&bitsBig=1000&bitsHuge=5000&raidBig=20&raidHuge=100&monthsBig=6&giftHuge=10&currency=AUD`
 
-- `duration`: ms on screen including intro/outro (default 5000, 8000 for `redemptions.html`). `0`
+- `duration`: ms on screen including intro/outro (default 5000, 10000 for `redemptions.html`). `0`
   holds forever, no outro, no auto-clear, for eyeballing a layout's actual size.
 - `top`: banner offset from the top edge in px (default 96)
 - `*Big` / `*Huge`: the tier thresholds above
