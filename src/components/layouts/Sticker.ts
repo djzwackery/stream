@@ -2,6 +2,7 @@
  * Avatar-beside-name layout: follow's "stamp" variant, sub/bits' party/chip variants.
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { Avatar } from "../Avatar.js";
 import { Scanlines } from "../Scanlines.js";
 import { display, label, panel } from "../style-helpers.js";
@@ -48,7 +49,7 @@ export function Sticker({
         e.detail || t.verb,
       ),
     ),
-    e.message &&
+    hasMessage(e) &&
       el(
         "p",
         {
@@ -60,7 +61,7 @@ export function Sticker({
             textWrap: "pretty",
           },
         },
-        `“${e.message}”`,
+        ...messageNodes(e),
       ),
     Scanlines(),
   );

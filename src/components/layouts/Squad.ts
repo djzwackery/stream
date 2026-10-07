@@ -2,6 +2,7 @@
  * Raiding-party avatar stack layout: raid's "squad".
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { Avatar } from "../Avatar.js";
 import { Scanlines } from "../Scanlines.js";
 import { display, label, panel } from "../style-helpers.js";
@@ -90,7 +91,7 @@ export function Squad({
           `+${e.party! - n}`,
         ),
     ),
-    e.message &&
+    hasMessage(e) &&
       el(
         "p",
         {
@@ -103,7 +104,7 @@ export function Squad({
             textWrap: "pretty",
           },
         },
-        `“${e.message}”`,
+        ...messageNodes(e),
       ),
     Scanlines(),
   );

@@ -2,6 +2,7 @@
  * Segmented fill-bar layout: bits' "meter", tip's "jar".
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { Avatar } from "../Avatar.js";
 import { GoalBar } from "../GoalBar.js";
 import { Scanlines } from "../Scanlines.js";
@@ -106,7 +107,7 @@ export function Meter({
         }),
       ),
     ),
-    e.message &&
+    hasMessage(e) &&
       el(
         "p",
         {
@@ -117,7 +118,7 @@ export function Meter({
             textWrap: "pretty",
           },
         },
-        `“${e.message}”`,
+        ...messageNodes(e),
       ),
     GoalBar({ goal: e.goal, tone, s }),
     Scanlines(),

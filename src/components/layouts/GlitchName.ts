@@ -2,6 +2,7 @@
  * RGB-glitch centred-text layout: follow's "glitch", raid's "siren".
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { display, label } from "../style-helpers.js";
 import type { LayoutProps } from "../types.js";
 
@@ -57,7 +58,7 @@ export function GlitchName({
       },
       e.detail || t.verb,
     ),
-    e.message &&
+    hasMessage(e) &&
       el(
         "p",
         {
@@ -69,7 +70,7 @@ export function GlitchName({
             textWrap: "pretty",
           },
         },
-        `“${e.message}”`,
+        ...messageNodes(e),
       ),
   );
 }

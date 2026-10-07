@@ -129,6 +129,21 @@ interface RawAlertPayload {
 }
 
 /**
+ * One run of a chat message: plain text, or an emote image. Exactly one of
+ * the two fields is set.
+ */
+interface MessagePart {
+  /**
+   * Plain text, absent when this part is an emote.
+   */
+  text?: string;
+  /**
+   * HTTPS URL of an emote image, absent when this part is plain text.
+   */
+  emote?: string;
+}
+
+/**
  * The normalised shape `AlertStage` (in `components/AlertStage.ts`) actually renders.
  */
 interface AlertStageEvent {
@@ -148,6 +163,11 @@ interface AlertStageEvent {
    * Message or comment shown alongside the alert.
    */
   message?: string;
+  /**
+   * The message as text and emote images in order, set only when it contains
+   * at least one emote. Rendered in place of `message` when present.
+   */
+  messageParts?: MessagePart[];
   /**
    * Progress toward a subathon-style goal, if tracked.
    */

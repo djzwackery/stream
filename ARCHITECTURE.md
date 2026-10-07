@@ -44,7 +44,9 @@ unrelated mechanisms, not one shared relay:
   those substituted values off the DOM (`#zw-tokens [data-token]`) and calling `AlertStage.show()`
   once; Streamlabs already owns receiving the Twitch event, queueing it, and controlling how long
   it stays up, the jobs `zw-alerts.ts`'s own `fire`/`build`/`queue`/`pump` pipeline (see Event flow,
-  below) handles for every other input. There's deliberately no relay or ongoing connection here to
+  below) handles for every other input. Chat emotes arrive as `<img>` markup, so `readMessage()`
+  copies out only text and `static-cdn.jtvnw.net` emote URLs into `messageParts`, never the markup
+  itself, and `Message.ts` renders those as text nodes and `<img>` elements. There's deliberately no relay or ongoing connection here to
   reconnect: Streamlabs re-renders the pasted HTML fresh for every alert.
 - **The Twitch relay Worker (`worker/`), for Channel Point redemptions.** Streamlabs' Alert Box has
   no type for these at all, so they're not reachable through the mechanism above. `worker/` is a

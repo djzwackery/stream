@@ -2,6 +2,7 @@
  * Two-tier eyebrow-bar-plus-body layout: sub/bits' "slab".
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { Avatar } from "../Avatar.js";
 import { Scanlines } from "../Scanlines.js";
 import { display, label, panel } from "../style-helpers.js";
@@ -54,7 +55,7 @@ export function Slab({ e, s, tone, t, hideEyebrow }: LayoutProps): HTMLElement {
           { style: { ...display(s, 2.9), color: "var(--white)" } },
           e.name,
         ),
-        e.message &&
+        hasMessage(e) &&
           el(
             "p",
             {
@@ -66,7 +67,7 @@ export function Slab({ e, s, tone, t, hideEyebrow }: LayoutProps): HTMLElement {
                 textWrap: "pretty",
               },
             },
-            `“${e.message}”`,
+            ...messageNodes(e),
           ),
       ),
       e.amount &&

@@ -32,7 +32,7 @@ const TIP_HUGE_THRESHOLD = 100;
 // widget is its own independently-pasted copy (see the file header), so
 // "still broken" often just means this specific one wasn't re-copied after
 // a fix landed here.
-const BUILD_MARKER = "2026-08-22c";
+const BUILD_MARKER = "2026-10-07a";
 
 /**
  * The eight per-type Alert Box boxes Streamlabs exposes; `resub`/`giftsub`
@@ -77,6 +77,88 @@ function readToken(tokens: Element, name: string): string {
  */
 function readRichText(elementId: string): string {
   return cleanText(document.getElementById(elementId)?.textContent);
+}
+
+const EMOTE_URL = /^https:\/\/static-cdn\.jtvnw\.net\/emoticons\//;
+
+// Copies only text nodes and Twitch-emote `<img>` srcs out of `node`, nothing
+// else, so markup in a chat message can never become markup on this page and a
+// chatter can't aim an `<img>` at a host of their choosing (OBS would fetch it).
+function collectParts(node: Node, parts: MessagePart[]): void {
+  node.childNodes.forEach((child) => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      parts.push({ text: child.textContent ?? "" });
+    } else if (child.nodeName === "IMG") {
+      const src = (child as Element).getAttribute("src") ?? "";
+      if (EMOTE_URL.test(src)) {
+        parts.push({ emote: src });
+      }
+    } else if (child.nodeName !== "SCRIPT" && child.nodeName !== "STYLE") {
+      collectParts(child, parts);
+    }
+  });
+}
+
+function tidyParts(parts: MessagePart[]): MessagePart[] {
+  const tidy = parts
+    .map((p) => (p.emote ? p : { text: (p.text ?? "").replace(/\s+/g, " ") }))
+    .filter((p) => p.emote || p.text);
+  const first = tidy[0];
+  const last = tidy[tidy.length - 1];
+  if (first?.text) {
+    first.text = first.text.trimStart();
+  }
+  if (last?.text) {
+    last.text = last.text.trimEnd();
+  }
+  return tidy.filter((p) => p.emote || p.text);
+}
+
+function partsText(parts: MessagePart[]): string {
+  return cleanText(parts.map((p) => p.text ?? "").join(""));
+}
+
+function isUsable(parts: MessagePart[]): boolean {
+  return parts.some((p) => p.emote) || partsText(parts) !== "";
+}
+
+/**
+ * Reads the viewer's message. Streamlabs renders chat emotes into
+ * `#alert-user-message` as `<img>` elements, but substitutes the standalone
+ * `{message}` token as escaped `<img>` markup, which showed up on screen as
+ * literal HTML. Prefers the former, falls back to parsing the latter.
+ */
+function readMessage(
+  tokens: Element,
+): Pick<AlertStageEvent, "message" | "messageParts"> {
+  const rich = document.getElementById("alert-user-message");
+  let parts: MessagePart[] = [];
+  if (rich) {
+    collectParts(rich, parts);
+    parts = tidyParts(parts);
+  }
+  if (!isUsable(parts)) {
+    const raw = readToken(tokens, "message");
+    parts = [];
+    if (/<img\b/i.test(raw)) {
+      // DOMParser builds a detached document: no scripts run, nothing loads.
+      collectParts(
+        new DOMParser().parseFromString(raw, "text/html").body,
+        parts,
+      );
+    } else if (raw) {
+      parts.push({ text: raw });
+    }
+    parts = tidyParts(parts);
+  }
+  if (!isUsable(parts)) {
+    return {};
+  }
+  const hasEmotes = parts.some((p) => p.emote);
+  return {
+    message: partsText(parts).replace(/\s+/g, " ") || undefined,
+    messageParts: hasEmotes ? parts : undefined,
+  };
 }
 
 /**
@@ -149,10 +231,7 @@ function buildEvent(
 ): AlertStageEvent {
   const name = readName(tokens) || "someone";
   const avatar = readAvatar();
-  const message =
-    readRichText("alert-user-message") ||
-    readToken(tokens, "message") ||
-    undefined;
+  const { message, messageParts } = readMessage(tokens);
   // Streamlabs only fills this in when the streamer has set a custom
   // "Message Template" for this alert type in their own dashboard (unset
   // otherwise); when set, it's meant to replace the default one-liner
@@ -179,6 +258,7 @@ function buildEvent(
       name,
       avatar,
       message,
+      messageParts,
       headline: months > 1 ? "Resub" : undefined,
       detail:
         messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
@@ -194,6 +274,7 @@ function buildEvent(
       name,
       avatar,
       message,
+      messageParts,
       headline: "Resub",
       detail:
         messageTemplate || `${months} ${months === 1 ? "month" : "months"}`,
@@ -218,6 +299,7 @@ function buildEvent(
       name: isAnonymous ? "An anonymous gifter" : gifter,
       avatar: isAnonymous ? undefined : avatar,
       message,
+      messageParts,
       headline: isCommunity ? "Community gift" : "Gifted sub",
       detail:
         messageTemplate ||
@@ -239,6 +321,7 @@ function buildEvent(
       name,
       avatar,
       message,
+      messageParts,
       amount: `${fmt(amount)} bits`,
       detail: messageTemplate || "cheered",
       tier,
@@ -256,6 +339,7 @@ function buildEvent(
       name,
       avatar,
       message,
+      messageParts,
       reward: powerUpName || undefined,
       amount: `${fmt(bitsSpent)} bits`,
       detail:
@@ -272,6 +356,7 @@ function buildEvent(
       name,
       avatar,
       message,
+      messageParts,
       party,
       detail:
         messageTemplate ||
@@ -291,6 +376,7 @@ function buildEvent(
     name,
     avatar,
     message,
+    messageParts,
     amount: amount || undefined,
     // Parsed separately from the displayed amount above: that one stays as
     // Streamlabs sent it (currency symbol included), this just needs a bare
@@ -440,7 +526,7 @@ async function waitForTokensToStabilize(tokens: Element): Promise<void> {
       .map((t) => readToken(tokens, t))
       .concat([
         readAvatar() ?? "",
-        readRichText("alert-user-message"),
+        JSON.stringify(readMessage(tokens)),
         readRichText("alert-message"),
       ])
       .join("|");
@@ -566,6 +652,9 @@ async function render(startedAt = Date.now()): Promise<void> {
       "event.reward": event.reward ?? "",
       "event.detail": event.detail ?? "",
       "event.message": event.message ?? "",
+      "event.emotes": String(
+        event.messageParts?.filter((p) => p.emote).length ?? 0,
+      ),
       "event.amount": event.amount ?? "",
       "event.fill": String(event.fill ?? ""),
       "event.party": String(event.party ?? ""),

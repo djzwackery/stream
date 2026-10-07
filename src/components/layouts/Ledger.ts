@@ -3,6 +3,7 @@
  * sub's "card", tip's "receipt".
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { Avatar } from "../Avatar.js";
 import { GoalBar } from "../GoalBar.js";
 import { Scanlines } from "../Scanlines.js";
@@ -82,7 +83,7 @@ export function Ledger({
           e.amount,
         ),
     ),
-    e.message &&
+    hasMessage(e) &&
       el(
         "p",
         {
@@ -94,7 +95,7 @@ export function Ledger({
             textWrap: "pretty",
           },
         },
-        `“${e.message}”`,
+        ...messageNodes(e),
       ),
     GoalBar({ goal: e.goal, tone, s }),
     Scanlines(),

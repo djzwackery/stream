@@ -4,6 +4,7 @@
  * who spent the bits on it, that's the part worth hyping.
  */
 import { el } from "../dom.js";
+import { hasMessage, messageNodes } from "../Message.js";
 import { MediaBox } from "../MediaBox.js";
 import { Scanlines } from "../Scanlines.js";
 import { display, label } from "../style-helpers.js";
@@ -124,7 +125,7 @@ export function PowerUp({
           },
           e.amount ? `${e.name} · ${e.amount}` : e.name,
         ),
-        e.message &&
+        hasMessage(e) &&
           el(
             "p",
             {
@@ -136,7 +137,7 @@ export function PowerUp({
                 textWrap: "pretty",
               },
             },
-            `“${e.message}”`,
+            ...messageNodes(e),
           ),
       ),
     ),
